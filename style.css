@@ -1,0 +1,523 @@
+#objectX {
+    position: absolute;
+    width: 37px;
+    right: 0px;
+}
+#objectY {
+    position: absolute;
+    width: 37px;
+    right: 0px;
+}
+#objectWidth {
+    position: absolute;
+    width: 37px;
+    right: 0px;
+}
+#objectHeight {
+    position: absolute;
+    width: 37px;
+    right: 0px;
+}
+#objectAngle {
+    position: absolute;
+    width: 30px;
+    right: 16px;
+}
+#degrees {
+    position: absolute;
+    width: 10px;
+    top: -2px;
+    right: 2px;
+}
+#objectColor {
+    position: absolute;
+    width: 60px;
+    right: 32px;
+}
+#picker1 {
+    position: absolute;
+    width: 23px;
+    height: 20px;
+    right: 0px;
+    cursor: pointer;
+}
+#borderColor {
+    position: absolute;
+    width: 65px;
+    right: 25%;
+}
+#picker2 {
+    position: absolute;
+    width: 23px;
+    height: 20px;
+    right: 3px;
+    cursor: pointer;
+}
+#borderColorWrapper {
+    position: absolute;
+    display: none;
+    top: 44.4%;
+    right: 42%;
+    width: 16%;
+    height: 20px;
+    z-index: 5;
+}
+#borderWidth {
+    position: absolute;
+    width: 42px;
+    right: 3px;
+}
+#borderWidthWrapper {
+    position: absolute;
+    top: 47%;
+    right: 10%;
+    width: 80%;
+    height: 20px;
+}
+#objectXWrapper {
+    position: absolute;
+    top: 103px;
+    right: 57%;
+    width: 66px;
+    height: 20px;
+    z-index: 3;
+}
+#objectYWrapper {
+    position: absolute;
+    top: 103px;
+    right: 47.6%;
+    width: 66px;
+    height: 20px;
+    z-index: 3;
+}
+#objectWidthWrapper {
+    position: absolute;
+    top: 103px;
+    right: 35.7%;
+    width: 91px;
+    height: 20px;
+    z-index: 3;
+}
+#objectHeightWrapper {
+    position: absolute;
+    top: 103px;
+    right: 24%;
+    width: 95px;
+    height: 20px;
+    z-index: 3;
+}
+#objectAngleWrapper {
+    position: absolute;
+    bottom: 58px;
+    left: 47%;
+    width: 95px;
+    height: 20px;
+    z-index: 3;
+}
+#objectColorWrapper {
+    position: absolute;
+    top: 103px;
+    right: 8%;
+    width: 140px;
+    height: 20px;
+    z-index: 3;
+}
+#objectColor {
+    position: absolute;
+    width: 60px;
+    right: 32px;
+}
+#fontSize {
+    position: absolute;
+    width: 33%;
+    right: 0px;
+}
+#fontSizeWrapper {
+    position: absolute;
+    top: 40%;
+    right: 51.1%;
+    width: 33.9%;
+    height: 20px;
+}
+#fontFamily {
+    position: absolute;
+    width: 67%;
+    height: 20px;
+    right: 0px;
+}
+#fontFamilyWrapper {
+    position: absolute;
+    top: 22%;
+    right: 15%;
+    width: 70%;
+    height: 20px;
+}
+#fontSample {
+    position: absolute;
+    text-align: center;
+    padding: 3px;
+    width: 100%;
+    right: 0px;
+}
+#switchBold, #switchItalic, #switchUnderline, #switchStrikethrough {
+    position: absolute;
+    top: 40%;
+    width: 19px;
+}
+#switchBold {
+    right: 35%;
+    font-weight: bold;
+}
+#switchItalic {
+    right: 25%;
+    font-style: italic;
+}
+#switchUnderline {
+    right: 15%;
+    text-decoration: underline;
+}
+#fontSampleWrapper {
+    position: absolute;
+    border: 3px inset #888888;
+    top: 58.8%;
+    right: 26.6%;
+    width: 40%;
+    height: 30px;
+}
+#darkBackground {
+    position: absolute;
+    display: none;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: #111111;
+    opacity: 0.45;
+    z-index: 4;
+}
+#borderSettingsDialog, #fontSettingsDialog,
+#connectionSettingsDialog, #exportDialog, #errorDialog {
+    position: fixed;
+    display: none;
+    background-color: #FCFCFC;
+    opacity: 1.0;
+    border: 1px solid #040404;
+    z-index: 5;
+}
+#borderSettingsDialog {
+    top: 38%;
+    left: 40%;
+    width: 20%;
+    height: 25%;
+}
+#fontSettingsDialog {
+    top: 32%;
+    left: 36%;
+    width: 26%;
+    height: 37%;
+}
+#connectionSettingsDialog {
+    top: 34%;
+    left: 36%;
+    width: 26%;
+    height: 38%;
+}
+#exportDialog {
+    top: 34%;
+    left: 34%;
+    width: 30%;
+    height: 40%;
+}
+#errorDialog {
+    top: 44%;
+    left: 35.4%;
+    width: 28%;
+    height: 20%;
+    font-family: Tahoma;
+    font-size: 13px;
+}
+#mode1, #mode2, #mode3 {
+    position: absolute;
+    top: 63%;
+    width: 19px;
+}
+#mode1 {
+    right: 54.2%;
+}
+#mode2 {
+    right: 44.2%;
+}
+#mode3 {
+    right: 34.2%;
+}
+#connectionColor {
+    position: absolute;
+    width: 65px;
+    right: 25%;
+}
+#picker3 {
+    position: absolute;
+    width: 23px;
+    height: 20px;
+    right: 3px;
+    cursor: pointer;
+}
+#connectionColorWrapper {
+    position: absolute;
+    display: none;
+    top: 42.6%;
+    right: 43%;
+    width: 16%;
+    height: 20px;
+    z-index: 5;
+}
+#connectionWidth {
+    position: absolute;
+    width: 42px;
+    right: 3px;
+}
+#connectionWidthWrapper {
+    position: absolute;
+    top: 43%;
+    right: 19.2%;
+    width: 61.5%;
+    height: 20px;
+}
+#alignWrapper {
+    position: absolute;
+    display: none;
+    top: 141px;
+    right: 18px;
+    width: 338px;
+    z-index: 3;
+}
+#connectionWrapper {
+    position: absolute;
+    display: none;
+    top: 141px;
+    right: 402px;
+    width: 134px;
+    z-index: 3;
+    word-spacing: -6px;
+}
+#textAlignWrapper {
+    position: absolute;
+    display: none;
+    top: 141px;
+    right: 54px;
+    width: 130px;
+    z-index: 3;
+}
+
+@font-face {
+    font-family: Graublau Sans Web;
+    src: url("fonts/GraublauWeb.otf") format("opentype");
+}
+
+@font-face {
+    font-family: Graublau Sans Web;
+    src: url("fonts/GraublauWebBold.otf") format("opentype");
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: Gentium;
+    src: url("fonts/Gentium.ttf");
+}
+
+@font-face {
+ font-family: Gentium;
+ src: url(fonts/GentiumItalic.ttf);
+ font-style: italic;
+}
+
+button {
+    height: 28px;
+    padding: 3px 3px 3px 3px;
+    margin: 0px 7px 0px 7px;
+}
+#textAlignWrapper button {
+    margin: 0px 3px 0px 3px;
+}
+.header {
+    width: 100%;
+    top: 0px;
+    left: 0px;
+    height: 22px;
+    background-color: #3737A4;
+    color: #FCFCFC;
+    font-size: 13px;
+    font-family: Verdana, Arial, Sans-Serif;
+    padding: 0px;
+    cursor: default;
+}
+.closeButton {
+    position: absolute;
+    right: 4px;
+    top: 2px;
+    width: 10px;
+    height: 10px;
+    background-color: #3737A4;
+    cursor: pointer;
+}
+.okButton {
+    position: absolute;
+    color: #FCFCFC;
+    border: 1px solid #1A1D52;
+    background-color: #3737A4;
+    font-size: 13px;
+    font-family: Verdana, Arial, Sans-Serif;
+    cursor: pointer;
+    width: 34%;
+    height: 19px;
+    text-align: center;
+    left: 35%;
+    bottom: 16px;
+}
+.okButton2 {
+    display: inline-block;
+    color: #FCFCFC;
+    border: 1px solid #1A1D52;
+    background-color: #3737A4;
+    font-size: 13px;
+    font-family: Verdana, Arial, Sans-Serif;
+    cursor: pointer;
+    width: 90px;
+    height: 19px;
+    text-align: center;
+    margin: 3px;
+}
+.cancelButton {
+    display: inline-block;
+    color: #FCFCFC;
+    border: 1px solid #1A1D52;
+    background-color: #3737A4;
+    font-size: 13px;
+    font-family: Verdana, Arial, Sans-Serif;
+    cursor: pointer;
+    width: 90px;
+    height: 19px;
+    text-align: center;
+    margin: 4px;
+}
+#clipboard {
+    position: absolute;
+    left: 5%;
+    width: 90%;
+    top: 36px;
+    bottom: 70px;
+    height: 62.24%;
+}
+.button {
+    position: absolute;
+    color: #FCFCFC;
+    border: 1px solid #1A1D52;
+    background-color: #3737A4;
+    font-size: 13px;
+    font-family: Verdana, Arial, Sans-Serif;
+    cursor: pointer;
+    width: 20px;
+    height: 19px;
+    text-align: center;
+}
+.textRect {
+    cursor: default    ;
+}
+.textRect::selection {
+    background: #fff;
+}
+.textRect::-moz-selection {
+    background: #fff;
+}
+.okButton::selection {
+    background: #3737A4;
+}
+.okButton::-moz-selection {
+    background: #3737A4;
+}
+.closeButton::selection {
+    background: #3737A4;
+}
+.closeButton::-moz-selection {
+    background: #3737A4;
+}
+.button::selection {
+    background: #3737A4;
+}
+.button::-moz-selection {
+    background: #3737A4;
+}
+input {
+    text-align: center;
+}
+.palette {
+    position: absolute;
+    border: 1px solid black;
+    height: 56px;
+    color: black;
+    font-weight: bold;
+    font-size: 14px;
+    font-family: Verdana, Arial, Sans-Serif;
+    padding: 2px 2px 3px 5px;
+    cursor: default;
+}
+.palette::selection {
+    background: #fff;
+}
+#rotationPalette {
+    bottom: 50px;
+    height: 25px;
+}
+#alignPalette {
+    display: none;
+    top: 135px;
+    right: 59px;
+    height: 30px;
+}
+#connectionPalette {
+    display: none;
+    top: 135px;
+    right: 387px;
+    height: 30px;
+    width: 158px;
+}
+#textAlignPalette {
+    display: none;
+    top: 135px;
+    right: 59px;
+    height: 30px;
+    width: 130px;
+}
+@-moz-document url-prefix() {
+    button { height: 30px; }
+    #alignWrapper {
+       right: 45px;
+    }
+    #alignPalette {
+       height: 34px;
+    }
+    #connectionWrapper {
+       width: 160px;
+       right: 390px;
+    }
+    #textAlignWrapper {
+        width: 140px;
+        right: 60px;
+    }
+    #connectionPalette {
+        height: 34px;
+    }
+    #textAlignPalette {
+        height: 34px;
+        width: 140px;
+    }
+}
+@media all and (-webkit-min-device-pixel-ratio:0) {
+    #objectAngleWrapper {
+        bottom: 57px;
+    }
+    #objectX, #objectY, #objectWidth, #objectHeight {
+        bottom: 0px;
+        height: 20px;
+    }
+}

@@ -1,0 +1,1092 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=cp1251">
+        <title>JSObjectDraw Editor</title>
+        <script type="text/javascript" src="wz_jsgraphics.js"></script>
+        <script type="text/javascript" src="js_objectdraw.js"></script>
+        <script type="text/javascript" src="jscolor/jscolor.js"></script>
+        <link rel="stylesheet" type="text/css" href="style.css" />
+        <script type="text/javascript">
+
+             var coords = []
+
+             var multiple = false
+
+
+             function setElementOpacity(elem, nOpacity) {
+                 var opacityProp = getOpacityProperty();
+
+                 if (!elem || !opacityProp) return;
+
+                 if (opacityProp=="filter") {
+                    nOpacity *= 100;
+
+                    // Если уже установлена прозрачность, то меняем её через коллекцию filters, иначе добавляем прозрачность через style.filter
+                    var oAlpha = elem.filters['DXImageTransform.Microsoft.alpha'] || elem.filters.alpha;
+                    if (oAlpha) oAlpha.opacity = nOpacity;
+                       else elem.style.filter += "progid:DXImageTransform.Microsoft.Alpha(opacity="+nOpacity+")"; // ¬Ґ¬Э¬с ¬д¬а¬Ф¬а ¬й¬д¬а¬Т¬н ¬Я¬Ц ¬Щ¬С¬д¬Ц¬в¬Ц¬д¬о ¬Х¬в¬е¬Ф¬Ъ¬Ц ¬ж¬Ъ¬Э¬о¬д¬в¬н ¬Ъ¬г¬б¬а¬Э¬о¬Щ¬е¬Ц¬Ю "+="
+                 }
+                 else // Другие браузеры
+                    elem.style[opacityProp] = nOpacity;
+             }
+
+             function getOpacityProperty() {
+                 if (typeof document.body.style.opacity == 'string') // CSS3 compliant (Moz 1.7+, Safari 1.2+, Opera 9)
+                    return 'opacity';
+                 else if (typeof document.body.style.MozOpacity == 'string') // Mozilla 1.6 и младше, Firefox 0.8
+                    return 'MozOpacity';
+                 else if (typeof document.body.style.KhtmlOpacity == 'string') // Konqueror 3.1, Safari 1.1
+                    return 'KhtmlOpacity';
+                 else if (document.body.filters && navigator.appVersion.match(/MSIE ([\d.]+);/)[1]>=5.5) // Internet Exploder 5.5+
+                    return 'filter';
+
+                 return false; //нет прозрачности
+             }
+
+             function updatePalettes() {
+                 var obj = selected_obj
+                 var count = 0
+                 for (var i = 0; i < selected_objects.length; i++) {
+                     if (selected_objects[i]) count++
+                 }
+                 if (obj) {
+                    document.getElementById('objectX').disabled = false
+                    document.getElementById('objectY').disabled = false
+                    document.getElementById('objectWidth').disabled = false
+                    document.getElementById('objectHeight').disabled = false
+                    document.getElementById('objectAngle').disabled = false
+                    document.getElementById('objectColor').disabled = false
+                    document.getElementById('picker1').disabled = false
+                    document.getElementById('picker1').color.fromString(obj.color)
+                    document.getElementById('objectX').value = obj.x
+                    document.getElementById('objectY').value = obj.y
+                    document.getElementById('objectWidth').value = obj.width
+                    document.getElementById('objectHeight').value = obj.height
+                    document.getElementById('objectAngle').value = obj.angle ? Math.round(obj.angle / (2 * Math.PI) * 360) : 0
+                    if (obj.type == 'text') document.getElementById('objectAngle').value = obj.angle
+                    document.getElementById('objectColor').value = obj.color
+                    document.getElementById('objectColor').style.border = '1px solid ' + obj.color
+                    document.getElementById('objectXWrapper').style.color = '#000000'
+                    document.getElementById('objectYWrapper').style.color = '#000000'
+                    document.getElementById('objectWidthWrapper').style.color = '#000000'
+                    document.getElementById('objectHeightWrapper').style.color = '#000000'
+                    document.getElementById('objectAngleWrapper').style.color = '#000000'
+                    document.getElementById('objectColorWrapper').style.color = '#000000'
+                    if (obj.type == 'circle' && obj.angle == 0 && obj.width == obj.height) {
+                       document.getElementById('objectAngleWrapper').style.color = '#A3A3A3'
+                       document.getElementById('objectAngle').disabled = true
+                       document.getElementById('objectAngle').value = ''
+                    }
+                 } else {
+                    document.getElementById('objectX').disabled = true
+                    document.getElementById('objectY').disabled = true
+                    document.getElementById('objectWidth').disabled = true
+                    document.getElementById('objectHeight').disabled = true
+                    //document.getElementById('objectAngle').disabled = true
+                    document.getElementById('objectColor').disabled = true
+                    document.getElementById('picker1').disabled = true
+                    document.getElementById('picker1').color.fromString('FFFFFF')
+                    document.getElementById('picker1').color.hidePicker()
+                    document.getElementById('objectX').value = ''
+                    document.getElementById('objectY').value = ''
+                    document.getElementById('objectWidth').value = ''
+                    document.getElementById('objectHeight').value = ''
+                    document.getElementById('objectAngle').value = '0'
+                    document.getElementById('objectColor').value = ''
+                    document.getElementById('objectColor').style.border = ''
+                    if (document.all) {
+                        document.getElementById('objectColor').style.border = '1px solid #7F9DB9'
+                    }
+                    document.getElementById('objectXWrapper').style.color = '#A3A3A3'
+                    document.getElementById('objectYWrapper').style.color = '#A3A3A3'
+                    document.getElementById('objectWidthWrapper').style.color = '#A3A3A3'
+                    document.getElementById('objectHeightWrapper').style.color = '#A3A3A3'
+                    document.getElementById('objectAngleWrapper').style.color = '#A3A3A3'
+                    document.getElementById('objectColorWrapper').style.color = '#A3A3A3'
+                    hideTextAlignPalette()
+                 }
+                 if (count == 0) {
+                     document.getElementById('objectAngle').value = ""
+                     document.getElementById('objectAngle').disabled = true
+                 }
+             }
+
+             function updateBorder(obj) {
+                  if (/#[0-9A-F]{6}/.test(obj.value)) {
+                      obj.style.border = '1px solid ' + obj.value
+                  }
+             }
+
+             function checkNumberOfSelectedObjects() {
+                 var count = 0
+                 for (var i = 0; i < selected_objects.length; i++) {
+                     if (selected_objects[i]) count++
+                 }
+                 if (count > 1) {
+                     hideTextAlignPalette();
+                     showAlignPalette();
+                     if (count == 2) {
+                        findConnection();
+                        showConnectionPalette();
+                     } else {
+                        hideConnectionPalette();
+                     }
+                     document.getElementsByTagName('li')[0].style.color = '#000000'
+                     multiple = true
+                 } else {
+                     hideAlignPalette();
+                     hideConnectionPalette();
+                     if (selected_obj && selected_obj.type == 'text') showTextAlignPalette();
+                     else hideTextAlignPalette();
+                     document.getElementsByTagName('li')[0].style.color = '#828282'
+                     multiple = false
+                 }
+             }
+
+             function showAlignPalette() {
+                 document.getElementById('alignPalette').style.display = 'block'
+                 document.getElementById('alignWrapper').style.display = 'block'
+             }
+
+             function hideAlignPalette() {
+                 document.getElementById('alignWrapper').style.display = 'none'
+                 document.getElementById('alignPalette').style.display = 'none'
+             }
+
+             function showConnectionPalette() {
+                 if (current_connection == null) {
+                    document.getElementById('connectionWrapper').getElementsByTagName('button')[1].disabled = ''
+                    document.getElementById('connectionWrapper').getElementsByTagName('button')[2].disabled = 'true'
+                    document.getElementById('connectionWrapper').getElementsByTagName('button')[3].disabled = 'true'
+                 } else {
+                    document.getElementById('connectionWrapper').getElementsByTagName('button')[1].disabled = 'true'
+                    document.getElementById('connectionWrapper').getElementsByTagName('button')[2].disabled = ''
+                    document.getElementById('connectionWrapper').getElementsByTagName('button')[3].disabled = ''
+                 }
+                 document.getElementById('connectionPalette').style.display = 'block'
+                 document.getElementById('connectionWrapper').style.display = 'block'
+             }
+
+             function hideConnectionPalette() {
+                 document.getElementById('connectionWrapper').style.display = 'none'
+                 document.getElementById('connectionPalette').style.display = 'none'
+             }
+
+             function showTextAlignPalette() {
+                 document.getElementById('textAlignPalette').style.display = 'block'
+                 document.getElementById('textAlignWrapper').style.display = 'block'
+             }
+
+             function hideTextAlignPalette() {
+                 document.getElementById('textAlignWrapper').style.display = 'none'
+                 document.getElementById('textAlignPalette').style.display = 'none'
+             }
+
+             function openBorderDialog() {
+                 document.getElementById('darkBackground').style.display = 'block'
+                 document.getElementById('borderSettingsDialog').style.display = 'block'
+                 document.getElementById('borderColorWrapper').style.display = 'block'
+                 if (selected_obj) {
+                     document.getElementById('borderWidth').value = selected_obj.borderWidth
+                     document.getElementById('borderColor').value = selected_obj.borderColor
+                     updateBorder(document.getElementById('borderColor'))
+                     document.getElementById('picker2').color.fromString(selected_obj.borderColor)
+                 }
+                 document.getElementById('menu').style.display = 'none'
+             }
+
+             function closeBorderDialog(saveChanges) {
+                 document.getElementById('darkBackground').style.display = 'none'
+                 document.getElementById('borderSettingsDialog').style.display = 'none'
+                 document.getElementById('borderColorWrapper').style.display = 'none'
+                 if (saveChanges && selected_obj) {
+                     if (/[0-9]+/.test(document.getElementById('borderWidth').value)) {
+                         for (var i = 0; i < selected_objects.length; i++) {
+                             if (selected_objects[i] && selected_objects[i].type == 'text') {
+                                 var d = document.getElementById('borderWidth').value - selected_objects[i].borderWidth
+                                 selected_objects[i].x -= d
+                                 selected_objects[i].y -= d
+                                 selected_objects[i].width += 2 * d
+                                 selected_objects[i].height += 2 * d
+                                 updatePalettes()
+                             }
+                             if (selected_objects[i]) selected_objects[i].borderWidth = document.getElementById('borderWidth').value
+
+                         }
+                     }
+                     for (var i = 0; i < selected_objects.length; i++) {
+                         if (selected_objects[i]) selected_objects[i].borderColor = document.getElementById('borderColor').value
+                     }
+                     repaint()
+                 }
+             }
+
+             function openFontDialog() {
+                 document.getElementById('darkBackground').style.display = 'block'
+                 document.getElementById('fontSettingsDialog').style.display = 'block'
+                 if (selected_obj) {
+                     document.getElementById('fontSize').value = selected_obj.fontSize
+                     document.getElementById('fontFamily').value = selected_obj.font
+                     if (selected_obj.fontWeight == 'bold' || selected_obj.fontWeight == 700) document.getElementById('switchBold').style.backgroundColor = '#C7601C'; else document.getElementById('switchBold').style.backgroundColor = '#3737A4'
+                     if (selected_obj.fontStyle == 'italic') document.getElementById('switchItalic').style.backgroundColor = '#C7601C'; else document.getElementById('switchItalic').style.backgroundColor = '#3737A4'
+                     if (selected_obj.underline) document.getElementById('switchUnderline').style.backgroundColor = '#C7601C'; else document.getElementById('switchUnderline').style.backgroundColor = '#3737A4'
+                     document.getElementById('fontSample').style.fontWeight = selected_obj.fontWeight
+                     document.getElementById('fontSample').style.fontStyle = selected_obj.fontStyle
+                     document.getElementById('fontSample').style.textDecoration = selected_obj.underline ? 'underline' : 'none'
+                 }
+                 document.getElementById('menu').style.display = 'none'
+             }
+
+             function closeFontDialog(saveChanges) {
+                 document.getElementById('darkBackground').style.display = 'none'
+                 document.getElementById('fontSettingsDialog').style.display = 'none'
+                 if (saveChanges && selected_obj) {
+                     if (/[0-9]+/.test(document.getElementById('fontSize').value)) {
+                         for (var i = 0; i < selected_objects.length; i++) {
+                             if (selected_objects[i] && selected_objects[i].type == 'text') {
+                                 selected_objects[i].fontSize = document.getElementById('fontSize').value
+                                 selected_objects[i].font = document.getElementById('fontFamily').value
+                                 selected_objects[i].fontWeight = document.getElementById('fontSample').style.fontWeight
+                                 selected_objects[i].fontStyle = document.getElementById('fontSample').style.fontStyle
+                                 selected_objects[i].underline = (document.getElementById('fontSample').style.textDecoration == 'underline')
+                             }
+                         }
+                     }
+                     repaint()
+                 }
+             }
+
+             function openConnectionDialog() {
+                 document.getElementById('darkBackground').style.display = 'block'
+                 document.getElementById('connectionSettingsDialog').style.display = 'block'
+                 document.getElementById('connectionColorWrapper').style.display = 'block'
+                 if (current_connection) {
+                     document.getElementById('connectionWidth').value = current_connection.lineWidth
+                     document.getElementById('connectionColor').value = current_connection.lineColor
+                     updateBorder(document.getElementById('connectionColor'))
+                     document.getElementById('picker3').color.fromString(current_connection.lineColor)
+                     if (current_connection.arrType == '1') document.getElementById('mode1').style.backgroundColor = '#C7601C'; else document.getElementById('mode1').style.backgroundColor = '#3737A4'
+                     if (current_connection.arrType == '2') document.getElementById('mode2').style.backgroundColor = '#C7601C'; else document.getElementById('mode2').style.backgroundColor = '#3737A4'
+                     if (current_connection.arrType == '3') document.getElementById('mode3').style.backgroundColor = '#C7601C'; else document.getElementById('mode3').style.backgroundColor = '#3737A4'
+                     document.getElementById('arrowType').value = current_connection.arrType
+                 }
+             }
+
+             function closeConnectionDialog(saveChanges) {
+                 document.getElementById('darkBackground').style.display = 'none'
+                 document.getElementById('connectionSettingsDialog').style.display = 'none'
+                 document.getElementById('connectionColorWrapper').style.display = 'none'
+                 if (saveChanges && current_connection) {
+                     if (/[0-9]+/.test(document.getElementById('connectionWidth').value)) {
+                         current_connection.lineWidth = document.getElementById('connectionWidth').value
+                     }
+                     current_connection.lineColor = document.getElementById('connectionColor').value
+                     current_connection.arrType = document.getElementById('arrowType').value
+                     repaint()
+                 }
+             }
+
+             function openExportDialog() {
+                 var connections = getConnectionsSafeCopy()
+                 checkPositions()
+                 var working_area = getCompressedArray()
+                 var data = ""
+                 data = "working_area = "
+                 data += JSON.stringify(working_area)
+                 data += "; connections = "
+                 data += JSON.stringify(connections)
+                 document.getElementById('clipboard').value = data
+                 document.getElementById('darkBackground').style.display = 'block'
+                 document.getElementById('exportDialog').style.display = 'block'
+             }
+
+             function closeExportDialog(doImport) {
+                 document.getElementById('darkBackground').style.display = 'none'
+                 document.getElementById('exportDialog').style.display = 'none'
+                 if (doImport) {
+                     try {
+                        eval(document.getElementById('clipboard').value)
+                        _import()
+                     } catch(ex) {
+                        openErrorDialog()
+                     }
+                 }
+             }
+
+             function openErrorDialog() {
+                 document.getElementById('darkBackground').style.display = 'block'
+                 document.getElementById('errorDialog').style.display = 'block'
+             }
+
+             function closeErrorDialog() {
+                 document.getElementById('darkBackground').style.display = 'none'
+                 document.getElementById('errorDialog').style.display = 'none'
+             }
+
+             function moveObjectsWithKey(direction) {
+                 if (selected_objects.length == 0) return
+                 for (var i = 0; i < selected_objects.length; i++) {
+                     switch (direction) {
+                        case 37:
+                           selected_objects[i].x -= 1
+                           break
+                        case 38:
+                           selected_objects[i].y -= 1
+                           break
+                        case 39:
+                           selected_objects[i].x += 1
+                           break
+                        case 40:
+                           selected_objects[i].y += 1
+                           break
+                     }
+                 }
+                 repaint()
+                 updatePalettes()
+             }
+
+             function moveVertexWithKey(direction) {
+                 if (!transform || last_vertex == -1) return
+                 switch (direction) {
+                     case 65:
+                        selected_obj.offsetsX[last_vertex] -= 1
+                        selected_obj.xPoints[last_vertex] -= 1
+                        if (selected_obj.offsetsX[last_vertex] < 0) {
+                           selected_obj.offsetsX[last_vertex] = 0
+                           selected_obj.xPoints[last_vertex] = selected_obj.x
+                        }
+                        timer0 = setTimeout(function() { if (!timer[0]) timer[0] = setInterval(function() { moveVertexWithKey(direction); }, 20) }, 300)
+                        break
+                     case 68:
+                        selected_obj.offsetsX[last_vertex] += 1
+                        selected_obj.xPoints[last_vertex] += 1
+                        if (selected_obj.offsetsX[last_vertex] > selected_obj.width) {
+                           selected_obj.offsetsX[last_vertex] = selected_obj.width
+                           selected_obj.xPoints[last_vertex] = selected_obj.x + selected_obj.width
+                        }
+                        timer0 = setTimeout(function() { if (!timer[1]) timer[1] = setInterval(function() { moveVertexWithKey(direction); }, 20) }, 300)
+                        break
+                     case 87:
+                        selected_obj.offsetsY[last_vertex] -= 1
+                        selected_obj.yPoints[last_vertex] -= 1
+                        if (selected_obj.offsetsY[last_vertex] < 0) {
+                           selected_obj.offsetsY[last_vertex] = 0
+                           selected_obj.yPoints[last_vertex] = selected_obj.y
+                        }
+                        timer0 = setTimeout(function() { if (!timer[2]) timer[2] = setInterval(function() { moveVertexWithKey(direction); }, 20) }, 300)
+                        break
+                     case 83:
+                        selected_obj.offsetsY[last_vertex] += 1
+                        selected_obj.yPoints[last_vertex] += 1
+                        if (selected_obj.offsetsY[last_vertex] > selected_obj.height) {
+                           selected_obj.offsetsY[last_vertex] = selected_obj.height
+                           selected_obj.yPoints[last_vertex] = selected_obj.y + selected_obj.height
+                        }
+                        timer0 = setTimeout(function() { if (!timer[3]) timer[3] = setInterval(function() { moveVertexWithKey(direction); }, 20) }, 300)
+                        break
+                 }
+                 calculatePoints2(selected_obj)
+                 repaint()
+             }
+
+             function movePointWithKey(direction) {
+                 if (!current_connection || !last_point) return
+                 switch (direction) {
+                     case 65:
+                        last_point.x -= 1
+                        timer0 = setTimeout(function() { if (!timer[0]) timer[0] = setInterval(function() { movePointWithKey(direction); }, 20) }, 300)
+                        break
+                     case 68:
+                        last_point.x += 1
+                        timer0 = setTimeout(function() { if (!timer[1]) timer[1] = setInterval(function() { movePointWithKey(direction); }, 20) }, 300)
+                        break
+                     case 87:
+                        last_point.y -= 1
+                        timer0 = setTimeout(function() { if (!timer[2]) timer[2] = setInterval(function() { movePointWithKey(direction); }, 20) }, 300)
+                        break
+                     case 83:
+                        last_point.y += 1
+                        timer0 = setTimeout(function() { if (!timer[3]) timer[3] = setInterval(function() { movePointWithKey(direction); }, 20) }, 300)
+                        break
+                 }
+                 repaint()
+             }
+
+             function selectAll() {
+                 selected_objects = []
+                 for (var i = 0; i < working_area.length; i++) {
+                    if (working_area[i]) selected_objects.push(working_area[i])
+                 }
+                 repaint()
+                 checkNumberOfSelectedObjects()
+                 updatePalettes()
+             }
+
+             function invertSelection() {
+                 var temp = []
+                 for (var i = 0; i < working_area.length; i++) {
+                    var found = false
+                    for (var j = 0; j < selected_objects.length; j++) {
+                       if (selected_objects[j] == working_area[i]) {
+                          found = true
+                          break
+                       }
+                    }
+                    if (!found) temp.push(working_area[i])
+                 }
+                 selected_objects = temp
+                 selected_obj = temp[0]
+                 repaint()
+                 checkNumberOfSelectedObjects()
+                 updatePalettes()
+             }
+
+             function fixPositions() {
+                 var c = document.getElementById('canvas')
+                 for (var i = 0; i < working_area.length; i++) {
+                     if (working_area[i].crop == -1) continue
+                     if (working_area[i].crop > 0) {
+                        if (working_area[i].x + working_area[i].width > c.clientWidth)
+                           working_area[i].x = c.clientWidth - 1 - working_area[i].crop
+                        else if (working_area[i].x + working_area[i].width > c.clientWidth)
+                           working_area[i].y = c.clientHeight - 1 - working_area[i].crop
+                        continue
+                     }
+                     if (working_area[i].x + working_area[i].width > c.clientWidth) {
+                        working_area[i].x = c.clientWidth - 1 - working_area[i].width
+                     }
+                     if (working_area[i].x < 0) {
+                        working_area[i].width += working_area[i].x
+                        working_area[i].x = 0
+                        calculatePoints(working_area[i])
+                     }
+                     if (working_area[i].y + working_area[i].height > c.clientHeight) {
+                        working_area[i].y = c.clientHeight - 1 - working_area[i].height
+                     }
+                     if (working_area[i].y < 0) {
+                        working_area[i].height += working_area[i].y
+                        working_area[i].y = 0
+                        calculatePoints(working_area[i])
+                     }
+                 }
+             }
+
+             function checkPositions() {
+                 var c = document.getElementById('canvas')
+                 for (var i = 0; i < working_area.length; i++) {
+                    if (working_area[i] == null) continue
+                    if (working_area[i].x + working_area[i].width > c.clientWidth) {
+                       working_area[i].crop = c.clientWidth - 1 - working_area[i].x
+                    }
+                    if (working_area[i].y + working_area[i].height > c.clientHeight) {
+                       working_area[i].crop = c.clientHeight - 1 - working_area[i].y
+                    }
+                    if (working_area[i].x < 0 || working_area[i].y < 0) working_area[i].crop = -1
+                 }
+             }
+
+             function getCompressedArray() {
+                 var array = []
+                 for (var i = 0; i < working_area.length; i++) {
+                    if (working_area[i]) array.push(working_area[i])
+                 }
+                 return array
+             }
+
+             function _import() {
+                 selected_obj = null
+                 selected_objects = []
+                 current_connection = null
+                 transform = false
+                 cur_vertex = -1
+                 for (var i = 0; i < working_area.length; i++) {
+                    assignDrawingMethod(working_area[i])
+                 }
+                 fixPositions()
+                 for (var i = 0; i < connections.length; i++) {
+                    assignDrawingMethod(connections[i])
+                    for (var j = 0; j < working_area.length; j++) {
+                       if (equals(connections[i].from, working_area[j])) {
+                          connections[i].from = working_area[j]
+                          continue
+                       }
+                       if (equals(connections[i].to, working_area[j])) {
+                          connections[i].to = working_area[j]
+                          continue
+                       }
+                    }
+                    for (var j = 0; j < connections[i].points.length; j++) {
+                        connections[i].points[j].connection = connections[i]
+                    }
+                 }
+                 repaint()
+                 updatePalettes()
+                 hideConnectionPalette()
+                 hideAlignPalette()
+             }
+
+             function clearWorksheet() {
+                 selected_obj = null
+                 selected_objects = []
+                 current_connection = null
+                 transform = false
+                 cur_vertex = -1
+                 working_area = []
+                 connections = []
+                 repaint()
+                 updatePalettes()
+                 hideConnectionPalette()
+                 hideAlignPalette()
+             }
+
+             function resetTimers() {
+                 for (var i = 0; i < timer.length; i++) {
+                    clearInterval(timer[i])
+                 }
+             }
+
+             var timer = [null, null, null, null]
+             var timer0
+
+             function init() {
+				 var canvas = document.getElementById('canvas')
+				 var menu = document.getElementById('menu')
+				 var items = document.getElementsByTagName('li')
+                 canvas.onmousedown = function(event) { selectObject(event); document.getElementById('menu').style.display = 'none'; document.getElementById('menu2').style.display = 'none'}
+                 canvas.onmousemove = function(event) { moveObject(event); moveDock(event); movePoint(event); moveVertex(event); }
+                 canvas.onmouseup = function(event) { if (temp) {selected_obj = temp; selected_objects.push(temp);} dropTempObject(event); setDock(); dropPoint(); dropVertex(); checkNumberOfSelectedObjects(); updatePalettes(); document.getElementById('objectPalette').obj = selected_obj }
+                 canvas.onclick = function(event) { createDockPoint(event); resetTimers() }
+                 canvas.oncontextmenu = function(event) {
+                    //if (selected_obj == null) return false;
+                    var e = event || window.event;
+                    coords = getCoords(e)
+                    var x = coords[0]
+                    var y = coords[1]
+                    checkNumberOfSelectedObjects()
+                    selected_obj = getObjectByCoords(e)
+                    if (selected_obj == null) {
+                        if (objectsToCopy.length == 0) return false;
+                        var menu2 = document.getElementById('menu2')
+                        menu2.style.left = parseInt(canvas.style.left) + x + 'px'
+                        menu2.style.top  = parseInt(canvas.style.top) + y + 'px'
+                        menu2.style.display = 'block';
+                        return false;
+                    }
+                    var contains = false
+                    for (var i = 0; i < selected_objects.length; i++) {
+                       if (selected_objects[i] == selected_obj) {
+                           contains = true;
+                           break;
+                       }
+                    }
+                    if (!contains) {
+                       selected_objects = []
+                       selected_objects.push(selected_obj)
+                    }
+                    repaint()
+                    if (selected_obj.type == 'text') {
+                        items[1].style.display = 'block'
+                        items[2].style.display = 'block'
+                    } else {
+                        items[1].style.display = 'none'
+                        items[2].style.display = 'none'
+                    }
+                    if (selected_obj.type != 'text' && selected_obj.type != 'circle') {
+                        items[6].style.display = 'block'
+                    } else {
+                        items[6].style.display = 'none'
+                    }
+                    menu.style.left = parseInt(canvas.style.left) + x + 'px'
+                    menu.style.top  = parseInt(canvas.style.top) + y + 'px'
+                    menu.style.display = 'block';
+                    return false;
+                 }
+                 document.onkeydown = function(event) {
+                    var evt = event || window.event
+                    var code = evt.keyCode
+                    var target = evt.target || evt.srcElement
+                    if (evt.repeat) return
+                    if (document.getElementById('darkBackground').style.display != 'block' && target.tagName.toLowerCase() != 'input') {
+                       if (code == 46 && !editText) {
+                          for (var i = 0; i < selected_objects.length; i++) {
+                             removeObject(selected_objects[i])
+                          }
+                          checkNumberOfSelectedObjects()
+                          updatePalettes()
+                       }
+                       if (code > 36 && code <= 40) {
+                          moveObjectsWithKey(code)
+                          timer0 = setTimeout(function() { if (!timer[code - 37]) { timer[code - 37] = setInterval(function() { moveObjectsWithKey(code); }, 20); } }, 300)
+                       }
+                       if (evt.ctrlKey && code == 67) copyObjects()
+                       if (evt.ctrlKey && code == 86) pasteObjects()
+                       if (evt.ctrlKey && code == 65) {
+                          selectAll()
+                          if (evt.preventDefault) evt.preventDefault()
+                          return false;
+                       }
+                       if (evt.ctrlKey && code == 73) invertSelection()
+                       if (evt.ctrlKey && code >= 51 && code <= 57) {
+                          if (transform) resetObject(selected_obj, code - 48)
+                          if (evt.preventDefault) evt.preventDefault()
+                          return false;
+                       }
+                       if (evt.ctrlKey && code == 84) {
+                          transform = true;
+                          equalize(selected_obj);
+                          calculatePoints(selected_obj);
+                          repaint();
+                          if (evt.preventDefault) evt.preventDefault()
+                          return false;
+                       }
+                       if (evt.ctrlKey && code == 69) {
+                          openExportDialog()
+                          if (evt.preventDefault) evt.preventDefault()
+                          return false;
+                       }
+                       if (code == 65 || code == 68 || code == 83 || code == 87) {
+                          moveVertexWithKey(code)
+                          movePointWithKey(code)
+                       }
+                    }
+                 }
+                 document.onkeyup = function(event) {
+                    var evt = event || window.event
+                    var code = evt.keyCode
+                    if (code > 36 && code <= 40) {
+                       clearTimeout(timer0)
+                       if (timer[code - 37] != null) {
+                          clearInterval(timer[code - 37])
+                          setTimeout(function() { timer[code - 37] = null }, 500)
+                       }
+                    }
+                    if (code == 65 || code == 68 || code == 83 || code == 87) {
+                       switch (code) {
+                          case 65:
+                             clearInterval(timer[0])
+                             setTimeout(function() { timer[0] = null }, 700)
+                             break
+                          case 68:
+                             clearInterval(timer[1])
+                             setTimeout(function() { timer[1] = null }, 700)
+                             break
+                          case 87:
+                             clearInterval(timer[2])
+                             setTimeout(function() { timer[2] = null }, 700)
+                             break
+                          case 83:
+                             clearInterval(timer[3])
+                             setTimeout(function() { timer[3] = null }, 700)
+                             break
+                       }
+                       clearTimeout(timer0)
+                    }
+                 }
+                 if (document.all) {
+                    document.getElementById('canvas').attachEvent("onmousemove", updateCursor)
+                    document.getElementById('canvas').attachEvent("onmousemove", resizeObject)
+                    document.getElementById('canvas').attachEvent("onmousedown", initResize)
+                    document.getElementById('canvas').attachEvent("onmousedown", updatePalettes)
+                    document.getElementById('objectX').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeX(this.value) })
+                    document.getElementById('objectY').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeY(this.value) })
+                    document.getElementById('objectWidth').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeWidth(this.value) })
+                    document.getElementById('objectHeight').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeHeight(this.value) })
+                    document.getElementById('objectColor').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeColor(this.value); document.getElementById('picker1').color.fromString(this.value) })
+                    document.getElementById('objectColor').attachEvent("onchange", function() { changeColor(this.value); updateBorder(this) })
+                    document.getElementById('borderColor').attachEvent("onblur", function() { document.getElementById('picker2').color.fromString(this.value) })
+                    document.getElementById('borderColor').attachEvent("onchange", function() { updateBorder(this) })
+                    document.getElementById('connectionColor').attachEvent("onblur", function() { document.getElementById('picker3').color.fromString(this.value) })
+                    document.getElementById('connectionColor').attachEvent("onchange", function() { updateBorder(this) })
+                 } else {
+                    document.getElementById('canvas').addEventListener("mousemove", updateCursor, false)
+                    document.getElementById('canvas').addEventListener("mousemove", resizeObject, false)
+                    document.getElementById('canvas').addEventListener("mousedown", initResize, false)
+                    document.getElementById('canvas').addEventListener("mousedown", updatePalettes, false)
+                    document.getElementById('objectX').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeX(this.value) }, false)
+                    document.getElementById('objectY').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeY(this.value) }, false)
+                    document.getElementById('objectWidth').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeWidth(this.value) }, false)
+                    document.getElementById('objectHeight').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeHeight(this.value) }, false)
+                    document.getElementById('objectColor').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeColor(this.value); document.getElementById('picker1').color.fromString(this.value) }, false)
+                    document.getElementById('objectColor').addEventListener("change", function() { changeColor(this.value); updateBorder(this) }, false)
+                    document.getElementById('borderColor').addEventListener("blur", function() { document.getElementById('picker2').color.fromString(this.value) }, false)
+                    document.getElementById('borderColor').addEventListener("change", function() { updateBorder(this) }, false)
+                    document.getElementById('connectionColor').addEventListener("blur", function() { document.getElementById('picker3').color.fromString(this.value) }, false)
+                    document.getElementById('connectionColor').addEventListener("change", function() { updateBorder(this) }, false)
+                 }
+                 document.getElementById('switchBold').onclick = function() {
+                    p = document.getElementById('fontSample').style.fontWeight
+                    if (p == 400 || p == 'normal' || p == '') {
+                        this.style.backgroundColor = '#C7601C'
+                        document.getElementById('fontSample').style.fontWeight = 'bold'
+                    }
+                    if (p == 'bold' || p == 700) {
+                        this.style.backgroundColor = '#3737A4'
+                        document.getElementById('fontSample').style.fontWeight = 'normal'
+                    }
+                 }
+                 document.getElementById('switchItalic').onclick = function() {
+                    p = document.getElementById('fontSample').style.fontStyle
+                    if (p == 'normal' || p == '') {
+                        this.style.backgroundColor = '#C7601C'
+                        document.getElementById('fontSample').style.fontStyle = 'italic'
+                    }
+                    if (p == 'italic') {
+                        this.style.backgroundColor = '#3737A4'
+                        document.getElementById('fontSample').style.fontStyle = 'normal'
+                    }
+                 }
+                 document.getElementById('switchUnderline').onclick = function() {
+                    p = document.getElementById('fontSample').style.textDecoration
+                    if (p == 'none' || p == '') {
+                        this.style.backgroundColor = '#C7601C'
+                        document.getElementById('fontSample').style.textDecoration = 'underline'
+                    }
+                    if (p == 'underline') {
+                        this.style.backgroundColor = '#3737A4'
+                        document.getElementById('fontSample').style.textDecoration = 'none'
+                    }
+                 }
+                 document.getElementById('mode1').onclick = function() {
+                    var type = document.getElementById('arrowType').value
+                    if (type != '0' && type != '') {
+                       document.getElementById('mode' + document.getElementById('arrowType').value).style.backgroundColor = '#3737A4'
+                    }
+                    if (type == '1') {
+                       document.getElementById('arrowType').value = '0'
+                       return
+                    }
+                    document.getElementById('arrowType').value = '1'
+                    this.style.backgroundColor = '#C7601C'
+                 }
+                 document.getElementById('mode2').onclick = function() {
+                    var type = document.getElementById('arrowType').value
+                    if (type != '0' && type != '') {
+                       document.getElementById('mode' + document.getElementById('arrowType').value).style.backgroundColor = '#3737A4'
+                    }
+                    if (type == '2') {
+                       document.getElementById('arrowType').value = '0'
+                       return
+                    }
+                    document.getElementById('arrowType').value = '2'
+                    this.style.backgroundColor = '#C7601C'
+                 }
+                 document.getElementById('mode3').onclick = function() {
+                    var type = document.getElementById('arrowType').value
+                    if (type != '0' && type != '') {
+                       document.getElementById('mode' + document.getElementById('arrowType').value).style.backgroundColor = '#3737A4'
+                    }
+                    if (type == '3') {
+                       document.getElementById('arrowType').value = '0'
+                       return
+                    }
+                    document.getElementById('arrowType').value = '3'
+                    this.style.backgroundColor = '#C7601C'
+                 }
+                 Initialize('canvas');
+                 var jg = getContext();
+                 jg.drawImage("img/logo.png", getClientWidth() / 2.1 - 140, getClientHeight() / 2.4 - 100, 280, 200);
+                 var t = 1.0
+                 setTimeout(function() {
+                     var timer = setInterval(function() {
+                         t -= 0.05
+                         setElementOpacity(document.images[0], t)
+                         if (t <= 0) {
+                             setElementOpacity(document.images[0], 0)
+                             clearInterval(timer)
+                         }
+                     }, 30)
+                 }, 2000)
+                 //protos = [new Circle('#00AA00', 90, 65, 22, 22),
+                 //          new Triangle('#CC0000', 130, 65, 22, 22),
+                 //          new Rectangle('#0000FF', 174, 65, 22, 22)]
+                 addProto('circle', '#00AA00', 74, 60, 22, 22);
+                 addProto('triangle', '#CC0000', 114, 60, 22, 22);
+                 addProto('rectangle', '#0000FF', 158, 60, 22, 22);
+                 addProto('text', '#101010', 200, 60, 22, 22);
+                 dragging = false
+
+                 for (var i = 0; i < items.length; i++) {
+                    if (document.all) {
+                       items[i].attachEvent("onmouseover", function(x) { return function() {items[x].style.backgroundColor = '#00b'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#fefefe'}}(i))
+                       items[i].attachEvent("onmouseout",  function(x) { return function() {items[x].style.backgroundColor = '#ccc'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#000'}}(i))
+                    } else {
+                       items[i].addEventListener("mouseover", function(x) { return function() {items[x].style.backgroundColor = '#00b'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#fefefe'}}(i), false)
+                       items[i].addEventListener("mouseout",  function(x) { return function() {items[x].style.backgroundColor = '#ccc'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#000'}}(i), false)
+                    }
+                 }
+                 if (document.all) {
+                     items[0].attachEvent("onmousedown", function() { if (!multiple) return; main_obj = getObjectByCoordsArray(coords); repaint(); document.getElementById('menu').style.display = 'none' })
+                     items[1].attachEvent("onmouseup", function() { openTextBox(); document.getElementById('menu').style.display = 'none' })
+                     items[2].attachEvent("onmouseup", function() { openFontDialog() })
+                     items[3].attachEvent("onmousedown", function() { bringToFront(selected_obj); selected_obj.draw(); document.getElementById('menu').style.display = 'none' })
+                     items[4].attachEvent("onmousedown", function() { sendToBack(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
+                     items[5].attachEvent("onmouseup", function() { copyObjects(coords[0], coords[1]); document.getElementById('menu').style.display = 'none' })
+                     items[6].attachEvent("onmouseup", function() { transform = true; equalize(selected_obj); calculatePoints(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
+                     items[7].attachEvent("onmouseup", function() { openBorderDialog() })
+                     items[8].attachEvent("onmousedown", function() { for (var i = 0; i < selected_objects.length; i++) {removeObject(selected_objects[i])}; document.getElementById('menu').style.display = 'none'; updatePalettes() })
+                     items[9].attachEvent("onmousedown", function() { pasteObjects(coords[0], coord[1]); document.getElementById('menu2').style.display = 'none' })
+                 } else {
+                     items[0].addEventListener("mousedown", function() { if (!multiple) return; main_obj = getObjectByCoordsArray(coords); repaint(); document.getElementById('menu').style.display = 'none' }, false)
+                     items[1].addEventListener("mouseup",   function() { openTextBox(); document.getElementById('menu').style.display = 'none' })
+                     items[2].addEventListener("mouseup", function() { openFontDialog() }, false)
+                     items[3].addEventListener("mousedown", function() { bringToFront(selected_obj); selected_obj.draw(); document.getElementById('menu').style.display = 'none' }, false)
+                     items[4].addEventListener("mousedown", function() { sendToBack(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' }, false)
+                     items[5].addEventListener("mouseup", function() { copyObjects(coords[0], coords[1]); document.getElementById('menu').style.display = 'none' }, false)
+                     items[6].addEventListener("mouseup", function() { transform = true; equalize(selected_obj); calculatePoints(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' }, false)
+                     items[7].addEventListener("mouseup", function() { openBorderDialog() }, false)
+                     items[8].addEventListener("mousedown", function() { for (var i = 0; i < selected_objects.length; i++) {removeObject(selected_objects[i])}; document.getElementById('menu').style.display = 'none'; updatePalettes() }, false)
+                     items[9].addEventListener("mouseup", function() { pasteObjects(coords[0], coords[1]); document.getElementById('menu2').style.display = 'none' }, false)
+                 }
+                 document.getElementById('textBox').style.display = 'none'
+                 document.getElementById('objectX').disabled = true
+                 document.getElementById('objectY').disabled = true
+                 document.getElementById('objectWidth').disabled = true
+                 document.getElementById('objectHeight').disabled = true
+                 document.getElementById('objectAngle').disabled = true
+                 document.getElementById('objectColor').disabled = true
+                 document.getElementById('picker1').disabled = true
+                 document.getElementById('objectColor').value = ''
+                 document.getElementById('objectX').onkeydown = function(event) { var evt = event ? event: window.event; var code = (evt.charCode) ? evt.charCode : evt.keyCode; if (code == 13) changeX(this.value) }
+                 document.getElementById('objectY').onkeydown = function(event) { var evt = event ? event: window.event; var code = (evt.charCode) ? evt.charCode : evt.keyCode; if (code == 13) changeY(this.value) }
+                 document.getElementById('objectWidth').onkeydown = function(event) { var evt = event ? event: window.event; var code = (evt.charCode) ? evt.charCode : evt.keyCode; if (code == 13) changeWidth(this.value) }
+                 document.getElementById('objectHeight').onkeydown = function(event) { var evt = event ? event: window.event; var code = (evt.charCode) ? evt.charCode : evt.keyCode; if (code == 13) changeHeight(this.value) }
+                 document.getElementById('objectAngle').onkeydown = function(event) { var evt = event ? event: window.event; var code = (evt.charCode) ? evt.charCode : evt.keyCode; if (code == 13) rotate(this.value, true) }
+                 document.getElementById('objectColor').style.height = '20px'
+                 document.getElementById('objectColor').onkeyup = function(event) { updateBorder(this); changeColor(this.value) }
+                 document.getElementById('borderColor').style.height = '20px'
+                 document.getElementById('borderColor').onkeyup = function(event) { updateBorder(this) }
+                 document.getElementById('connectionColor').style.height = '20px'
+                 document.getElementById('connectionColor').onkeyup = function(event) { updateBorder(this) }
+                 setElementOpacity(document.getElementById('darkBackground'), 0.45)
+                 if (document.all) {
+                     document.getElementById('borderSettingsDialog').style.position = 'absolute'
+                     document.getElementById('fontSettingsDialog').style.position = 'absolute'
+                     document.getElementById('connectionSettingsDialog').style.position = 'absolute'
+                     document.getElementById('borderColorWrapper').style.right = '42.2%'
+                     document.getElementById('canvas').style.width = '95%'
+                     document.getElementById('protoPalette').style.height = '65px'
+                     document.getElementById('objectPalette').style.height = '65px'
+                     document.getElementById('objectColorWrapper').style.right = '7%'
+                     document.getElementById('objectColorWrapper').style.width = '145px'
+                     document.getElementById('objectColor').style.width = '65px'
+                 }
+                 document.getElementById('objectXWrapper').style.color = '#A3A3A3'
+                 document.getElementById('objectYWrapper').style.color = '#A3A3A3'
+                 document.getElementById('objectWidthWrapper').style.color = '#A3A3A3'
+                 document.getElementById('objectHeightWrapper').style.color = '#A3A3A3'
+                 document.getElementById('objectColorWrapper').style.color = '#A3A3A3'
+                 document.getElementById('objectAngleWrapper').style.color = '#A3A3A3'
+
+                 document.getElementById('exportButton').onmouseover = function() { document.getElementById('tooltip').innerHTML = 'Import/export' }
+                 document.getElementById('exportButton').onmouseout = function() { document.getElementById('tooltip').innerHTML = '' }
+                 document.getElementById('clearButton').onmouseover = function() { document.getElementById('tooltip').innerHTML = 'Clear image' }
+                 document.getElementById('clearButton').onmouseout = function() { document.getElementById('tooltip').innerHTML = '' }
+
+
+                 if (screen.width > 1100) {
+                     document.getElementById('objectXWrapper').style.right = '584px'
+                     document.getElementById('objectYWrapper').style.right = '487px'
+                     document.getElementById('objectWidthWrapper').style.right = '366px'
+                     document.getElementById('objectHeightWrapper').style.right = '246px'
+                     document.getElementById('objectColorWrapper').style.right = '82px'
+                     document.getElementById('objectPalette').style.width = '694px'
+                     document.getElementById('rotationPalette').style.width = '186px'
+                     if (document.all) {
+			             document.getElementById('canvas').style.height = screen.height > 900 ? '92.8%' : '91.6%'
+                     }
+                 }
+             }
+
+             function getClientWidth() {
+                 return document.compatMode=='CSS1Compat' && !window.opera ? document.documentElement.clientWidth : document.body.clientWidth;
+             }
+
+             function getClientHeight() {
+                 return document.compatMode=='CSS1Compat' && !window.opera ? document.documentElement.clientHeight : document.body.clientHeight;
+             }
+
+             function updateFont(obj) {
+                 document.getElementById('fontSample').style.fontFamily = obj.value
+                 document.getElementById('fontSample').style.top = (parseInt(document.getElementById('fontSampleWrapper').clientHeight) / 2 - parseInt(document.getElementById('fontSample').clientHeight) / 2) + 'px'
+             }
+
+
+    </script>
+    <style type="text/css">
+         #canvas {
+             position: absolute;
+             border: 1px solid black;
+             top: 40px;
+             left: 38px;
+             right: 38px;
+             bottom: 30px;
+             z-index: 1;
+             overflow: hidden;
+         }
+         #menu, #menu2 {
+             position: absolute;
+             display: none;
+             padding: 2px;
+             background-color: #ссс;
+             left: 45px;
+             top: 42px;
+             z-index: 2;
+             border: 1px solid #999;
+             -moz-box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+             -webkit-box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+             box-shadow: 3px 3px 10px rgba(0,0,0,0.5);
+         }
+         .item {
+             font-family: Arial, Helvetica, sans-serif;
+             font-size: 15px;
+             padding: 2px;
+             list-style-type: none;
+             cursor: default;
+             background-color: #ccc;
+         }
+    </style>
+    <!--[if lte IE 7]><style type="text/css">/* <![CDATA[ */
+         .palette {height: 65px;}
+         #canvas {height: 89.3%;}
+         #rotationPalette {bottom: 49px; height: 35px;}/* ]]> */</style>
+    <![endif]-->
+    <!--[if lte IE 9]><style type="text/css">/* <![CDATA[ */
+         .palette {height: 62px;}
+         body { margin-right: 0px;}
+         #canvas {height: 89.3%; right: 12px;}
+         #rotationPalette {bottom: 48px; height: 38px;}
+         #alignPalette { top: 137px; right: 59px; height: 36px;}
+         #textAlignPalette { top: 137px; right: 59px; height: 36px; width: 140px;}
+         #connectionPalette { top: 137px; right: 378px; height: 36px; width: 172px;}
+         #alignWrapper { right: 30px;}
+         #textAlignWrapper { right: 61px;}
+         #connectionWrapper { width: 154px; right: 384px;}/* ]]> */</style>
+    <![endif]-->
+    </head>
+    <body onload="init()">
+        <div id="canvas" style="left: 38px; top: 40px;">
+            <div class="palette" id="protoPalette" style="left: 40px; top: 32px; width: 200px;">Palette</div>
+        </div>
+        <textarea id="textBox"></textarea>
+
+	    <div id="menu">
+	       <li class="item">Set as main</li>
+	       <li class="item">Edit</li>
+	       <li class="item">Font...</li>
+	       <li class="item">Bring to front</li>
+	       <li class="item">Send to back</li>
+	       <li class="item">Copy</li>
+	       <li class="item">Transform</li>
+	       <li class="item">Border...</li>
+	       <li class="item">Remove</li>
+	    </div>
+
+	    <div id="menu2">
+	       <li class="item">Paste</li>
+	    </div>
+
+	    <div id="darkBackground"></div>
+	    <div id="borderSettingsDialog">
+	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Border settings</span>
+	          <div class="closeButton" onclick="closeBorderDialog(false)">X</div>
+	       </div>
+	       <div id="borderWidthWrapper">Thickness<input type="text" id="borderWidth" maxlength="1" /></div>
+	       <div class="okButton" onclick="closeBorderDialog(true)">OK</div>
+	    </div>
+	    <div id="borderColorWrapper">Color<input type="text" id="borderColor" maxlength="7" /><input id="picker2" class="color {valueElement:'borderColor', pickerPosition:'right', pickerClosable:true, hash:true}"></div>
+	    <div id="fontSettingsDialog">
+	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Font settings</span>
+	          <div class="closeButton" onclick="closeFontDialog(false)">X</div>
+	       </div>
+	       <div id="switchBold" class="button">B</div>
+	       <div id="switchItalic" class="button">I</div>
+	       <div id="switchUnderline" class="button">U</div>
+	       <div id="fontSampleWrapper"><div id="fontSample">Sample</div></div>
+	       <div id="fontSizeWrapper">Size<input type="text" id="fontSize" maxlength="2" /></div>
+	       <div id="fontFamilyWrapper">Font
+	       <select name="fontFamily" id="fontFamily" onchange="updateFont(this)">
+	         <option value="Arial, Helvetica, sans-serif" style="font-family: Arial, Helvetica, sans-serif;">Arial</option>
+	         <option value="Arial Black, Arial Black, Gadget, sans-serif" style="font-family: Arial Black, Arial Black, Gadget, sans-serif">Arial Black</option>
+	         <option value="Comic Sans MS, Comic Sans MS5, cursive" style="font-family: Comic Sans MS, cursive">Comic Sans MS</option>
+	         <option value="Courier New, Courier6, monospace" style="font-family: Courier New, Courier6, monospace">Courier New</option>
+	         <option value="Georgia, Georgia1, serif" style="font-family: Georgia, Georgia1, serif">Georgia</option>
+	         <option value="Graublau Sans Web" style="font-family: Graublau Sans Web">Graublau Sans</option>
+	         <option value="Gentium" style="font-family: Gentium">Gentium</option>
+	         <option value="Impact, Impact5, Charcoal6, sans-serif" style="font-family: Impact, Impact5, Charcoal6, sans-serif">Impact</option>
+	         <option value="Lucida Console, Monaco5, monospace" style="font-family: Lucida Console, Monaco5, monospace">Lucida Console</option>
+	         <option value="Lucida Sans Unicode, Lucida Grande, sans-serif" style="font-family: Lucida Sans Unicode, Lucida Grande, sans-serif">Lucida Grande</option>
+	         <option value="Palatino Linotype, Book Antiqua3, Palatino6, serif" style="font-family: Palatino Linotype, Book Antiqua3, Palatino6, serif">Palatino Linotype</option>
+	         <option value="Tahoma, Geneva, sans-serif" style="font-family: Tahoma, Geneva, sans-serif">Tahoma</option>
+	         <option value="Trebuchet MS1, Helvetica, sans-serif" style="font-family: Trebuchet MS1, Helvetica, sans-serif">Trebuchet MS</option>
+	         <option value="Verdana, Geneva, sans-serif" style="font-family: Verdana, Geneva, sans-serif">Verdana</option>
+	      </select>
+	      </div>
+	       <div class="okButton" onclick="closeFontDialog(true)">OK</div>
+	    </div>
+	    <div id="connectionSettingsDialog">
+	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Connection settings</span>
+	          <div class="closeButton" onclick="closeConnectionDialog(false)">X</div>
+	       </div>
+	       <div id="mode1" class="button">&#8594;</div>
+	       <div id="mode2" class="button">&#8592;</div>
+	       <div id="mode3" class="button">&#8596;</div>
+	       <div id="connectionWidthWrapper">Thickness<input type="text" id="connectionWidth" maxlength="1" /></div>
+	       <div class="okButton" onclick="closeConnectionDialog(true)">OK</div>
+	    </div>
+	    <div id="connectionColorWrapper">Color<input type="text" id="connectionColor" maxlength="7" /><input id="picker3" class="color {valueElement:'connectionColor', pickerClosable:true, hash:true}"></div>
+	    <input id="arrowType" type="hidden" value="" />
+
+	    <div id="exportDialog">
+	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Import/export</span>
+	          <div class="closeButton" onclick="closeExportDialog(false)">X</div>
+	       </div>
+	       <textarea id="clipboard"></textarea>
+	       <div style="position: absolute; width: 100%; bottom: 12px; text-align: center;"><div class="okButton2" onclick="closeExportDialog(true)">Import</div><div class="cancelButton" onclick="closeExportDialog(false)">Close</div></div>
+	    </div>
+
+	    <div id="errorDialog">
+	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Error</span>
+	          <div class="closeButton" onclick="closeExportDialog()">X</div>
+	       </div>
+	       <div style="margin-top: 14px; margin-left: 4%; width: 92%; text-align: center;">An error occurred during the import</div>
+	       <div style="position: absolute; width: 100%; bottom: 12px; text-align: center;"><div class="okButton2" onclick="closeErrorDialog()">OK</div></div>
+	    </div>
+
+	    <div id="objectXWrapper">X<input type="text" id="objectX" maxlength="3" /></div>
+	    <div id="objectYWrapper">Y<input type="text" id="objectY" maxlength="3" /></div>
+	    <div id="objectWidthWrapper">Width<input type="text" id="objectWidth" maxlength="3" /></div>
+	    <div id="objectHeightWrapper">Height<input type="text" id="objectHeight" maxlength="3" /></div>
+	    <div id="objectColorWrapper">Color<input type="text" id="objectColor" maxlength="7" /><input id="picker1" class="color {valueElement:'objectColor', pickerClosable:true, hash:true}"></div>
+	    <div class="palette" id="objectPalette" style="right: 59px; top: 73px; width: 637px">Object</div>
+	    <div class="palette" id="alignPalette" style="width: 320px; padding-top:4px;"></div>
+	    <div class="palette" id="connectionPalette" style="padding-top:4px;"></div>
+	    <div class="palette" id="textAlignPalette" style="padding-top:4px;"></div>
+	    <div class="palette" id="rotationPalette" style="left:43%; width: 16%; padding-top:4px;"></div>
+	    <div id="objectAngleWrapper">Angle<input type="text" id="objectAngle" maxlength="3" /><div id="degrees">&deg;</div></div>
+	    <div id="alignWrapper">
+	       <button style="display: none;"><img src="" /></button>
+	       <button onclick="alignObjects('l')"><img src="img/align_left.png" /></button>
+	       <button onclick="alignObjects('c')"><img src="img/align_center.png" /></button>
+	       <button onclick="alignObjects('r')"><img src="img/align_right.png" /></button>
+	       <button onclick="alignObjects('t')"><img src="img/align_top.png" /></button>
+	       <button onclick="alignObjects('m')"><img src="img/align_middle.png" /></button>
+	       <button onclick="alignObjects('b')"><img src="img/align_bottom.png" /></button>
+	    </div>
+	    <div id="connectionWrapper">
+	       <button style="display: none;"><img src="" /></button>
+	       <button onclick="addConnection(); showConnectionPalette()"><img src="img/create_link.png" /></button>
+	       <button onclick="removeConnection(); showConnectionPalette()"><img src="img/remove_link.png" /></button>
+	       <button onclick="openConnectionDialog()"><img src="img/edit.png" /></button>
+	    </div>
+	    <div id="textAlignWrapper">
+	       <button style="display: none;"><img src="" /></button>
+	       <button onclick="setTextAlign('left')"><img src="img/text_align_left.png" /></button>
+	       <button onclick="setTextAlign('center')"><img src="img/text_align_center.png" /></button>
+	       <button onclick="setTextAlign('right')"><img src="img/text_align_right.png" /></button>
+	    </div>
+	    <div id="exportButton" onclick="openExportDialog()"></div>
+	    <div id="clearButton" onclick="clearWorksheet()"></div>
+	    <div id="tooltip"></div>
+    </body>
+</html>
