@@ -1,12 +1,13 @@
 function jsCanvas(id, wnd)
 {
-	this.setColor = new Function('arg', 'this.ctx.strokeStyle = arg.toLowerCase(); this.ctx.fillStyle = arg.toLowerCase();');
+	this.setColor = new Function('arg', 'canvas', 'var ctx = canvas && canvas.getContext(\'2d\') || this.ctx; ctx.strokeStyle = arg.toLowerCase(); ctx.fillStyle = arg.toLowerCase();');
    this.setFontSize = new Function('arg', 'this.fontSize = parseInt(arg) + \'px\'; this.setFont()');
    this.setFont = new Function('arg', 'this.fontFamily = arg; this.updateFont()');
    
    this.canvas = document.createElement('canvas')
    this.ctx = this.canvas.getContext('2d')
    document.getElementById(id).appendChild(this.canvas)
+   this.canvas.style.zIndex = '1'
    
    var dpi = 2
    
@@ -27,84 +28,94 @@ function jsCanvas(id, wnd)
    div.style.position = 'absolute'
    div.style.left = '0'
    div.style.top = '0'
-   div.id = 'textObjects'
+   div.id = 'objects'
    this.canvas.parentNode.appendChild(div)
 
-   this.setStroke = function(x)
+   this.setStroke = function(x, canvas)
    {
-      this.ctx.lineWidth = x;
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.lineWidth = x;
    };
 
 
-   this.updateFont = function(fam, sz, sty)
+   this.updateFont = function(canvas)
    {
-      this.ctx.font = this.fontSize + ' ' + this.fontFamily;
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.font = this.fontSize + ' ' + this.fontFamily;
    };
 
 
-   this.drawLine = function(x, y, x2, y2)
+   this.drawLine = function(x, y, x2, y2, canvas)
    {
-      this.ctx.moveTo(x * dpi, y * dpi);
-      this.ctx.lineTo(x2 * dpi, y2 * dpi);
-      this.ctx.stroke();
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.moveTo(x * dpi, y * dpi);
+      ctx.lineTo(x2 * dpi, y2 * dpi);
+      ctx.stroke();
    };
 
 
-   this.drawPolyline = this.drawPolyLine = function(x, y, s)
+   this.drawPolyline = this.drawPolyLine = function(x, y, canvas)
    {
-      this.ctx.moveTo(x[0] * dpi, y[0] * dpi)
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.moveTo(x[0] * dpi, y[0] * dpi)
       for (var i=1 ; i<x.length ; i++ )
-         this.ctx.lineTo(x[i] * dpi, y[i] * dpi);
+         ctx.lineTo(x[i] * dpi, y[i] * dpi);
    };
 
 
-   this.drawRect = function(x, y, w, h)
+   this.drawRect = function(x, y, w, h, canvas)
    {
-      this.ctx.strokeRect(x * dpi, y * dpi, w * dpi, h * dpi);
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.strokeRect(x * dpi, y * dpi, w * dpi, h * dpi);
    };
 
 
-   this.fillRect = function(x, y, w, h)
+   this.fillRect = function(x, y, w, h, canvas)
    {
-      this.ctx.fillRect(x * dpi, y * dpi, w * dpi, h * dpi);
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.fillRect(x * dpi, y * dpi, w * dpi, h * dpi);
    };
 
 
-   this.drawEllipse = this.drawOval = function(x, y, w, h, rotation = 0)
+   this.drawEllipse = this.drawOval = function(x, y, w, h, canvas, rotation = 0)
    {
-      this.ctx.beginPath();
-      this.ctx.ellipse(x * dpi, y * dpi, w/2 * dpi, h/2 * dpi, rotation, 0, 2 * Math.PI);
-      this.ctx.stroke();
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.beginPath();
+      ctx.ellipse(x * dpi, y * dpi, w/2 * dpi, h/2 * dpi, rotation, 0, 2 * Math.PI);
+      ctx.stroke();
    };
 
 
-   this.fillEllipse = this.fillOval = function(left, top, w, h, rotation = 0, borderColor = 'transparent', borderWidth = 0)
+   this.fillEllipse = this.fillOval = function(left, top, w, h, canvas, rotation = 0, borderColor = 'transparent', borderWidth = 0)
    {
-      this.ctx.beginPath();
-      this.ctx.ellipse((left + w/2)  * dpi, (top + h/2) * dpi, w/2 * dpi, h/2 * dpi, rotation, 0, 2 * Math.PI);
-      this.ctx.fill();
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.beginPath();
+      ctx.ellipse((left + w/2)  * dpi, (top + h/2) * dpi, w/2 * dpi, h/2 * dpi, rotation, 0, 2 * Math.PI);
+      ctx.fill();
    };
    
    
-   this.drawPolygon = function(x, y)
+   this.drawPolygon = function(x, y, canvas)
    {
-      this.ctx.beginPath();
-      this.ctx.moveTo(x[0] * dpi, y[0] * dpi)
-      for (var i=1 ; i<x.length ; i++ )
-         this.ctx.lineTo(x[i] * dpi, y[i] * dpi);
-      this.ctx.closePath();
-      this.ctx.stroke();
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.beginPath();
+      ctx.moveTo(x[0] * dpi, y[0] * dpi)
+      for (var i = 1; i < x.length; i++)
+         ctx.lineTo(x[i] * dpi, y[i] * dpi);
+      ctx.closePath();
+      ctx.stroke();
    };
 
 
-   this.fillPolygon = function(x, y)
+   this.fillPolygon = function(x, y, canvas)
    {
-      this.ctx.beginPath();
-      this.ctx.moveTo(x[0] * dpi, y[0] * dpi)
-      for (var i=1 ; i<x.length ; i++ )
-         this.ctx.lineTo(x[i] * dpi, y[i] * dpi);
-      this.ctx.closePath();
-      this.ctx.fill();
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
+      ctx.beginPath();
+      ctx.moveTo(x[0] * dpi, y[0] * dpi)
+      for (var i = 1; i < x.length; i++)
+         ctx.lineTo(x[i] * dpi, y[i] * dpi);
+      ctx.closePath();
+      ctx.fill();
 	};
 
 
@@ -142,23 +153,24 @@ text both horizontally (e.g. right) and vertically within that rectangle */
                      '-webkit-transform:rotate(-' + angle + 'deg);';
       }
       html +=
-         'color:' + this.ctx.strokeStyle + ';">'+
+         'color:' + this.color + ';">'+
          txt +
          '<\/div>';
       var el = document.createElement('div')
-      document.getElementById('textObjects').appendChild(el)
+      document.getElementById('objects').appendChild(el)
       el.innerHTML = html
    };
 
 
-   this.drawImage = function(imgSrc, x, y, w, h)
+   this.drawImage = function(imgSrc, x, y, w, h, canvas)
    {
+      var ctx = canvas && canvas.getContext('2d') || this.ctx
       var img = new Image();
       img.onload = (function(ctx, x, y, w, h) {
          return function() {
             ctx.drawImage(this, x, y, w, h);
          }
-      })(this.ctx, x, y, w, h);
+      })(ctx, x, y, w, h);
       img.src = imgSrc;
    };
 
@@ -166,7 +178,16 @@ text both horizontally (e.g. right) and vertically within that rectangle */
    this.clear = function()
    {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      document.getElementById('textObjects').innerHTML = '';
+      document.getElementById('objects').innerHTML = '';
+      for (var i = 0; i < working_area.length; i++) {
+         working_area[i].el = null
+      }
+   };
+
+
+   this.clearBottomLayer = function()
+   {
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
    };
 
 

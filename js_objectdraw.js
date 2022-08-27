@@ -1,6 +1,6 @@
 /* This notice must be untouched at all times.
 
-js_objectdraw.js    v. 0.98a
+js_objectdraw.js    v. 1.0a
 Based on wz_jsgraphics.js (JavaScript VectorDraw Library by Walter Zorn, Copyright (c) 2002-2004)
 
 The latest version is available at
@@ -8,7 +8,7 @@ http://popov654.pp.ru/js/js_objectDraw.js
 
 Copyright (c) 2012 Alexandr Popov. All rights reserved.
 Created 07.12.2011 by Alexandr Popov (Web: http://popov654.pp.ru )
-Last modified: 12.10.2019
+Last modified: 27.08.2022
 
 
 High Performance JavaScript Modelling Library.
@@ -41,6 +41,7 @@ or see http://www.gnu.org/copyleft/lesser.html
 */
 
     var backend = isCanvasSupported() ? 'canvas' : 'wz_jsgraphics'
+    var object_always_on_top_while_dragging = false
     var jg = null
     
     function isCanvasSupported() {
@@ -654,8 +655,11 @@ or see http://www.gnu.org/copyleft/lesser.html
             debounce(updateHistory, 600)
          } catch(ex) {}
          calculatePoints(obj)
-         obj.draw()
-         repaint()
+         if (backend == 'canvas' && object_always_on_top_while_dragging) {
+            repaintSelectedObjects()
+         } else {
+            repaint()
+         }
      }
      
      function debounce(f, timeout) {
@@ -934,6 +938,35 @@ or see http://www.gnu.org/copyleft/lesser.html
             displayOutline(selected_obj)
          }
      }
+     
+     function repaintSelectedObjects() {
+         jg.clearBottomLayer()
+         drawProtos()
+         var pad = 8
+         for (var i = 0; i < selected_objects.length; i++) {
+            if (selected_objects[i]) {
+              var obj = selected_objects[i]
+              obj.el.style.left = obj.x - pad + 'px'
+              obj.el.style.top =  obj.y - pad + 'px'
+              var old_width = parseInt(obj.el.style.width)
+              var old_height = parseInt(obj.el.style.height)
+              if (obj.width != old_width || obj.height != old_height) {
+                 obj.el.style.width = selected_objects[i].width + pad * 2 + 'px'
+                 obj.el.style.height = selected_objects[i].height + pad * 2 + 'px'
+                 if (!obj.el) prepareCanvas(obj)
+                 else {
+                     var dpi = 2
+                     obj.el.children[0].style.width = obj.width + 'px'
+                     obj.el.children[0].style.height = obj.height + 'px'
+                     obj.el.children[0].width = obj.width * dpi
+                     obj.el.children[0].height = obj.height * dpi
+                 }
+                 obj.draw()
+              }
+              displayOutline(selected_objects[i])
+            }
+         }
+     }
 
      function selectObject(event) {
 
@@ -953,7 +986,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          coords = getCoords(e)
          var x = coords[0]
          var y = coords[1]
-
+         
          var obj = getProtoByCoords(e)
          existing = false
          if (obj == null) {       //If not a prototype
@@ -970,6 +1003,17 @@ or see http://www.gnu.org/copyleft/lesser.html
          }
 
          if (e.which != 1) return;
+         
+         if (!e.shiftKey && !e.ctrlKey && selected_obj && selected_obj.x <= x - 6 && x <= selected_obj.x + selected_obj.width + 7 &&
+             selected_obj.y <= y - 6 && y <= selected_obj.y + selected_obj.height + 7) {
+            dragging = true
+            existing = true
+            main_obj = null
+            temp = selected_obj
+            drag_offsetX = x - selected_obj.x
+            drag_offsetY = y - selected_obj.y
+            return;
+         }
 
          objectsToCopy = []
          xCopy = null
@@ -1218,13 +1262,17 @@ or see http://www.gnu.org/copyleft/lesser.html
             }
             lastX = x
             lastY = y
-         } else {
+         } else if (temp) {
             temp.x = x - drag_offsetX
             temp.y = y - drag_offsetY
          }
 
 
-         repaint()
+         if (backend == 'canvas' && object_always_on_top_while_dragging) {
+            repaintSelectedObjects()
+         } else {
+            repaint()
+         }
          debounce(updateHistory, 600)
 
          if (current_connection) displayOutline(current_connection)
@@ -1438,7 +1486,7 @@ or see http://www.gnu.org/copyleft/lesser.html
                     var y = Math.round((obj.yPoints[i] + obj.yPoints[0]) / 2 - obj.y)
                  }
                  obj.docks.push(new Array(obj.offsetsX[i], obj.offsetsY[i]))
-                 obj.docks.push(new Array(x,y))
+                 obj.docks.push(new Array(x, y))
              }
          }
          if (obj.type == 'circle') {
@@ -1752,17 +1800,62 @@ or see http://www.gnu.org/copyleft/lesser.html
              assignDrawingMethod(to)
          }
      }
+     
+     function prepareCanvas(obj) {
+         var pad = 8
+         if (backend == 'canvas' && (!obj.el || !obj.el.parentNode)) {
+             obj.el = document.createElement('div')
+            
+             var width = obj.width + pad * 2
+             var height = obj.height + pad * 2
+            
+             if (obj.type != 'connection') {
+                 obj.el.style.width = width + 'px'
+                 obj.el.style.height = height + 'px'
+                 obj.el.style.position = 'absolute'
+                 obj.el.style.left = obj.x - pad + 'px'
+                 obj.el.style.top = obj.y - pad + 'px'
+             } else {
+                 var left = obj.from.x + obj.from.docks[obj.dockFrom][0] - pad
+                 var top = obj.from.y + obj.from.docks[obj.dockFrom][1] - pad
+                 obj.el.style.left = left + 'px'
+                 obj.el.style.top = top + 'px'
+                 obj.el.style.width = obj.to.x + obj.to.docks[obj.dockTo][0] + pad - left + 'px'
+                 obj.el.style.height = obj.to.y + obj.to.docks[obj.dockTo][1] + pad - top + 'px'
+             }
+            
+             var canvas = document.createElement('canvas')
+             obj.el.appendChild(canvas)
+             document.getElementById('objects').appendChild(obj.el)
+            
+             var dpi = 2
+             
+             canvas.style.width = width + 'px'
+             canvas.style.height = height + 'px'
+             canvas.width = Math.ceil(width * dpi)
+             canvas.height = Math.ceil(height * dpi)
+             
+             return canvas
+         }
+     }
 
      function assignDrawingMethod(obj) {
+         var pad = 8
+         var canvas = null
+         
          switch(obj.type) {
              case "circle":
+                
                 obj.draw = function() {
-                   jg.setColor(this.color)
-                   jg.fillEllipse(this.x, this.y, this.width, this.height);
+                   if (backend == 'canvas') canvas = prepareCanvas(obj)
+                   jg.setColor(this.color, canvas)
+                   var x = canvas ? pad : this.x
+                   var y = canvas ? pad : this.y
+                   jg.fillEllipse(x, y, this.width, this.height, canvas);
                    if (this.borderWidth > 0) {
-                       jg.setColor(this.borderColor);
-                       jg.setStroke(this.borderWidth);
-                       jg.drawEllipse(this.x, this.y, this.width, this.height);
+                       jg.setColor(this.borderColor, canvas);
+                       jg.setStroke(this.borderWidth, canvas);
+                       jg.drawEllipse(x, y, this.width, this.height, canvas);
                    }
                    jg.paint()
                 }
@@ -1771,59 +1864,92 @@ or see http://www.gnu.org/copyleft/lesser.html
              case "triangle":
              case "polygon":
                 obj.draw = function() {
+                   if (backend == 'canvas') canvas = prepareCanvas(obj)
+                   var x = canvas ? pad : this.x
+                   var y = canvas ? pad : this.y
                    for (var i = 0; i < this.vNum; i++) {
-                       this.xPoints[i] = this.x + this.offsetsX[i]
-                       this.yPoints[i] = this.y + this.offsetsY[i]
+                       this.xPoints[i] = x + this.offsetsX[i]
+                       this.yPoints[i] = y + this.offsetsY[i]
                    }
-                   jg.setColor(this.color)
-                   jg.fillPolygon(this.xPoints, this.yPoints);
+                   jg.setColor(this.color, canvas)
+                   jg.fillPolygon(this.xPoints, this.yPoints, canvas);
                    if (this.borderWidth > 0) {
-                       jg.setColor(this.borderColor);
-                       jg.setStroke(this.borderWidth);
-                       jg.drawPolygon(this.xPoints, this.yPoints);
+                       jg.setColor(this.borderColor, canvas);
+                       jg.setStroke(this.borderWidth, canvas);
+                       jg.drawPolygon(this.xPoints, this.yPoints, canvas);
                    }
                    jg.paint()
                 }
                 break;
              case "text":
                 obj.draw = function() {
-                   jg.setColor(this.color)
+                   if (backend == 'canvas') canvas = prepareCanvas(obj)
+                   jg.setColor(this.color, canvas)
                    jg.setFont(this.font, this.fontSize, Font.PLAIN)
                    var textDecoration = this.underline ? 'underline' : 'none'
-                   jg.drawStringRect(this.text, this.x, this.y, this.width, this.height, this.align, this.borderWidth, this.fontWeight, this.fontStyle, textDecoration, this.angle)
+                   jg.drawStringRect(this.text, this.x, this.y, this.width, this.height, this.align, this.borderWidth, this.fontWeight, this.fontStyle, textDecoration, this.angle, this.color)
                    if (this.borderWidth > 0) {
-                       jg.setColor(this.borderColor);
-                       jg.setStroke(this.borderWidth);
-                       this.xPoints = new Array(this.x - 2, this.x + this.width + 3 - this.borderWidth, this.x + this.width + 3 - this.borderWidth, this.x - 2);
-                       this.yPoints = new Array(this.y - 2, this.y - 2, this.y + this.height + 3 - this.borderWidth, this.y + this.height + 3 - this.borderWidth);
-                       jg.drawPolygon(this.xPoints, this.yPoints);
+                       jg.setColor(this.borderColor, canvas);
+                       jg.setStroke(this.borderWidth, canvas);
+                       var x = canvas ? 0 : this.x
+                       var y = canvas ? 0 : this.y
+                       this.xPoints = new Array(x - 2, x + this.width + 3 - this.borderWidth, x + this.width + 3 - this.borderWidth, x - 2);
+                       this.yPoints = new Array(y - 2, y - 2, y + this.height + 3 - this.borderWidth, y + this.height + 3 - this.borderWidth);
+                       jg.drawPolygon(this.xPoints, this.yPoints, canvas);
                    }
                    jg.paint()
                 }
                 break;
              case "connection":
                 obj.draw = function() {
-                   jg.setColor(this.lineColor)
-                   jg.setStroke(this.lineWidth)
-
+                   if (backend == 'canvas') canvas = prepareCanvas(obj)
+                   jg.setColor(this.lineColor, canvas)
+                   jg.setStroke(this.lineWidth, canvas)
+                   
                    var x = this.from.x + this.from.docks[this.dockFrom][0]
                    var y = this.from.y + this.from.docks[this.dockFrom][1]
                    var xTo = this.to.x + this.to.docks[this.dockTo][0]
                    var yTo = this.to.y + this.to.docks[this.dockTo][1]
+                   
+                   var x0 = x
+                   var y0 = y
+                   
+                   if (backend == 'canvas') {
+                      xTo = xTo - x + pad
+                      yTo = yTo - y + pad
+                      x = pad
+                      y = pad
+                   }
 
                    for (var i = 0; i < this.points.length; i++) {
                       if (i == 0 && this.arrType > 1) {
                          var c = correct(this.from.x + this.points[i].x, this.from.y + this.points[i].y, x, y, this.lineWidth, this.points.length)
+                         if (backend == 'canvas') {
+                            for (var j = 0; j < c.length; j++) {
+                               c[j] -= j % 2 == 0 ? x0 : y0
+                            }
+                         }
                          x2 = c[0]; y2 = c[1]; xTo2 = c[2]; yTo2 = c[3]
 
-                         jg.drawLine(x2, y2, xTo2, yTo2)
-                         drawArrow(x, y, this.from.x + this.points[i].x, this.from.y + this.points[i].y, this.lineWidth)
+                         jg.drawLine(x2, y2, xTo2, yTo2, canvas)
+                         var xa = this.from.x + this.points[i].x
+                         var ya = this.from.y + this.points[i].y
+                         if (backend == 'canvas') {
+                            x3 = xa - x0 + pad
+                            y3 = ya - y0 + pad
+                         }
+                         drawArrow(x, y, x3, y3, this.lineWidth, canvas)
                       } else {
-                         jg.drawLine(x, y, this.from.x + this.points[i].x, this.from.y + this.points[i].y)
+                         jg.drawLine(x, y, x3, y3, canvas)
                       }
 
                       x = this.from.x + this.points[i].x
                       y = this.from.y + this.points[i].y
+                      
+                      if (backend == 'canvas') {
+                         x = x - x0 + pad
+                         y = y - y0 + pad
+                      }
                    }
 
                    var xTo2 = xTo
@@ -1835,15 +1961,15 @@ or see http://www.gnu.org/copyleft/lesser.html
                    if (this.arrType > 0) {
                       var c = correct(x, y, xTo, yTo, this.lineWidth, this.arrType, this.points.length)
                       x2 = c[0]; y2 = c[1]; xTo2 = c[2]; yTo2 = c[3]
-                      jg.drawLine(x2, y2, xTo2, yTo2)
+                      jg.drawLine(x2, y2, xTo2, yTo2, canvas)
                       if (this.arrType != 2) {
-                         drawArrow(xTo, yTo, x, y, this.lineWidth)
+                         drawArrow(xTo, yTo, x, y, this.lineWidth, canvas)
                       }
                       if (this.points.length == 0 && this.arrType > 1) {
-                         drawArrow(x, y, xTo, yTo, this.lineWidth)
+                         drawArrow(x, y, xTo, yTo, this.lineWidth, canvas)
                       }
                    } else {
-                      jg.drawLine(x, y, xTo, yTo)
+                      jg.drawLine(x, y, xTo, yTo, canvas)
                    }
                    jg.paint()
                 }
