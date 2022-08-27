@@ -878,24 +878,24 @@ text both horizontally (e.g. right) and vertically within that rectangle */
 		this.htm += '<div class="textRect" style="position:absolute;overflow:hidden;word-wrap: break-word;'+
 			'left:' + x + 'px;'+
 			'top:' + y + 'px;'+
-			'width:'+width +'px;'+
-			'height:'+height +'px;'+
+			'width:' + width + 'px;'+
+			'height:' + height + 'px;'+
 			'padding-top:'+ (padding > 0 ? (parseInt(padding) - 1) : 0) +'px;'+
-			'padding-right:'+ (padding > 0 ? (parseInt(padding) + 2) : 0) +'px;'+
-			'text-align:'+halign+';'+
+			'padding-right:' + (padding > 0 ? (parseInt(padding) + 2) : 0) +'px;'+
+			'text-align:' + halign + ';'+
 			'font-family:' +  this.ftFam + ';'+
 			'font-size:' + this.ftSz + ';'+
 			'font-weight:' + fontWeight + ';'+
 			'font-style:' + fontStyle + ';'+
 			'text-decoration:' + textDecoration + ';';
-                        if (angle) {
-                           this.htm += 'transform:rotate(-' + angle + 'deg);'+
-                                       '-ms-transform:rotate(-' + angle + 'deg);'+
-                                       '-moz-transform:rotate(-' + angle + 'deg);'+
-                                       '-o-transform:rotate(-' + angle + 'deg);'+
-                                       '-webkit-transform:rotate(-' + angle + 'deg);';
-                        }
-                        this.htm +=
+      if (angle) {
+         this.htm += 'transform:rotate(-' + angle + 'deg);'+
+                     '-ms-transform:rotate(-' + angle + 'deg);'+
+                     '-moz-transform:rotate(-' + angle + 'deg);'+
+                     '-o-transform:rotate(-' + angle + 'deg);'+
+                     '-webkit-transform:rotate(-' + angle + 'deg);';
+      }
+      this.htm +=
 			'color:' + this.color + ';">'+
 			txt +
 			'<\/div>';

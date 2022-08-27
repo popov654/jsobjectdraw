@@ -40,9 +40,27 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA,
 or see http://www.gnu.org/copyleft/lesser.html
 */
 
+    var backend = isCanvasSupported() ? 'canvas' : 'wz_jsgraphics'
+    var jg = null
+    
+    function isCanvasSupported() {
+       var elem = document.createElement('canvas');
+       return !!(elem.getContext && elem.getContext('2d'));
+    }
+
     function Initialize(id) {
         div_id = id
-        jg = new jsGraphics(id);
+        switch (backend) {
+           case 'wz_jsgraphics':
+              jg = new jsGraphics(id);
+              break;
+           case 'canvas':
+              jg = new jsCanvas(id);
+              break;
+           case 'svg':
+              jg = new jsSVG(id);
+              break;
+        }
         protos = []
         working_area = []
         Circle.prototype = new Shape('circle')
@@ -195,7 +213,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          this.vNum = 0
          this.text = ''
          this.fontSize = 15
-         this.font = "Arial"
+         this.font = "Arial, Helvetica, sans-serif"
          this.fontWeight = "normal"
          this.fontStyle = "normal"
          this.align = "center"
@@ -288,14 +306,17 @@ or see http://www.gnu.org/copyleft/lesser.html
          }
          jg.setStroke(1);
          jg.setColor('black');
-         if (obj == main_obj) jg.setColor('00DD00');
+         if (obj == main_obj) jg.setColor('#00DD00');
          var pad = obj.padding
+         var r = 6
+         var d = backend != 'canvas' ? r/2-1 : r/2
+         if (backend == 'canvas') jg.ctx.strokeStyle = '#303030'
          jg.drawRect(obj.x - pad, obj.y - pad, obj.width + pad * 2, obj.height + pad * 2)
          jg.setColor('#00DD00')
-         jg.fillRect(obj.x - (pad + 3), obj.y - (pad + 2), 6, 6)
-         jg.fillRect(obj.x + obj.width + (pad - 2), obj.y - (pad + 2), 6, 6)
-         jg.fillRect(obj.x - (pad + 3), obj.y + obj.height + (pad - 2), 6, 6)
-         jg.fillRect(obj.x + obj.width + (pad - 2), obj.y + obj.height + (pad - 2), 6, 6)
+         jg.fillRect(obj.x - (pad + d), obj.y - (pad + d), r, r)
+         jg.fillRect(obj.x + obj.width + (pad - d), obj.y - (pad + d), r, r)
+         jg.fillRect(obj.x - (pad + d), obj.y + obj.height + (pad - d), r, r)
+         jg.fillRect(obj.x + obj.width + (pad - d), obj.y + obj.height + (pad - d), 6, 6)
          if (transform) {
             for (var i = 0; i < obj.vNum; i++) {
                drawPoint(obj.xPoints[i], obj.yPoints[i], 4)
@@ -630,11 +651,25 @@ or see http://www.gnu.org/copyleft/lesser.html
 
          try {
             updatePalettes()
+            debounce(updateHistory, 600)
          } catch(ex) {}
          calculatePoints(obj)
          obj.draw()
          repaint()
      }
+     
+     function debounce(f, timeout) {
+        if (debounce_timer) {
+           clearTimeout(debounce_timer)
+           debounce_timer = null
+        }
+        debounce_timer = setTimeout(function() {
+           f()
+           debounce_timer = null
+        }, timeout)
+     }
+     
+     var debounce_timer = null
 
      function initResize() {
          var cur = document.getElementById(div_id).style.cursor
@@ -1190,6 +1225,8 @@ or see http://www.gnu.org/copyleft/lesser.html
 
 
          repaint()
+         debounce(updateHistory, 600)
+
          if (current_connection) displayOutline(current_connection)
          if (!existing) {
             temp.draw()
@@ -1234,6 +1271,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          existing = true
 
          repaint()
+         updateHistory()
 
          temp = null
          dragging = false
@@ -1281,6 +1319,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          current_connection.dockTo = last_good[1]
          cur_dock_obj = null
          repaint()
+         updateHistory()
      }
 
      function createDockPoint(event) {
@@ -1304,6 +1343,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          }
          current_connection.points[i] = p
          repaint()
+         updateHistory()
      }
 
      function movePoint(event) {
@@ -1321,6 +1361,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          if (!cur_point || !current_connection) return;
          cur_point = null
          repaint()
+         updateHistory()
      }
 
      function removePoint(point) {
@@ -1330,6 +1371,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          }
          current_connection.points = temp
          repaint()
+         updateHistory()
      }
 
      function getPoint(event) {
@@ -1367,6 +1409,7 @@ or see http://www.gnu.org/copyleft/lesser.html
         if (selected_obj == null || selected_obj.type != "text") return;
         selected_obj.align = value
         repaint()
+        updateHistory()
      }
 
      function calculatePoints(obj) {
@@ -1460,12 +1503,12 @@ or see http://www.gnu.org/copyleft/lesser.html
      function removeObject(obj) {
          for (var i = 0; i < working_area.length; i++) {
             if (working_area[i] == obj) {
-               working_area[i] = null
+               working_area.splice(i, 1)
             }
          }
          for (var i = 0; i < selected_objects.length; i++) {
             if (selected_objects[i] == obj) {
-               selected_objects[i] = null
+               selected_objects.splice(i, 1)
             }
          }
          selected_obj = null
@@ -1481,18 +1524,21 @@ or see http://www.gnu.org/copyleft/lesser.html
                   if (connections[i] == current_connection) {
                      current_connection = null
                   }
-                  connections[i] = null
+                  connections.splice(i, 1)
                }
             }
          }
          transform = false
          repaint()
+         updateHistory()
      }
 
      function bringToFront(obj) {
          var id = getObjectId(obj);
          working_area[working_area.length] = obj;
-         working_area[id]  = null;
+         working_area.splice(id, 1);
+         repaint();
+         updateHistory()
      }
 
      function sendToBack(obj) {
@@ -1502,6 +1548,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          }
          working_area[0] = obj;
          repaint();
+         updateHistory()
      }
 
      function getObjectId(obj) {
@@ -1826,6 +1873,7 @@ or see http://www.gnu.org/copyleft/lesser.html
         }
         calculatePoints(obj)
         repaint()
+        updateHistory()
      }
 
      function getVertex(x, y) {
@@ -1855,6 +1903,7 @@ or see http://www.gnu.org/copyleft/lesser.html
         if (selected_obj.offsetsY[cur_vertex] > selected_obj.height) selected_obj.offsetsY[cur_vertex] = selected_obj.height
 
         repaint()
+        debounce(updateHistory, 600)
      }
 
      function dropVertex() {
@@ -1920,6 +1969,7 @@ or see http://www.gnu.org/copyleft/lesser.html
         calculatePoints(obj)
         cur_vertex = -1
         repaint()
+        updateHistory()
      }
 
      function removeVertex(n) {
@@ -1948,6 +1998,7 @@ or see http://www.gnu.org/copyleft/lesser.html
         obj.vNum--
 
         repaint()
+        updateHistory()
      }
 
      function findConnection() {
@@ -2062,7 +2113,84 @@ or see http://www.gnu.org/copyleft/lesser.html
          }
          return a-b
      }
-
+     
+     function updateHistory() {
+        if (state_history.length && JSON.stringify(working_area) ==
+            state_history[state_history.length-1].working_area) {
+               return
+        }
+        var sel_object = -1
+        var sel_objects = []
+        for (var i = 0; i < working_area.length; i++) {
+           if (selected_objects.indexOf(working_area[i]) != -1) {
+              sel_objects.push(i)
+           }
+           if (selected_obj == working_area[i]) sel_object = i
+        }
+        state_history.splice(state_history.length - history_position, history_position)
+        state_history.push({ working_area: JSON.stringify(working_area),
+                             connections: JSON.stringify(connections),
+                             selected_obj: sel_object,
+                             selected_objects: sel_objects })
+        history_position = 0
+     }
+     
+     var history_position = 0
+     
+     function historyBackward() {
+        history_position++
+        if (history_position > state_history.length-1) {
+           history_position = history.length-1
+           return
+        }
+        setHistoryPoint()
+     }
+     
+     function historyForward() {
+        history_position--
+        if (history_position < 0) {
+           history_position = 0
+           return
+        }
+        setHistoryPoint()
+     }
+     
+     function setHistoryPoint() {
+        working_area = JSON.parse(state_history[state_history.length - 1 - history_position].working_area)
+        connections = JSON.parse(state_history[state_history.length - 1 - history_position].connections)
+        selected_obj = working_area[state_history[state_history.length - 1 - history_position].selected_obj]
+        selected_objects = []
+        for (var i = 0; i < state_history[state_history.length - 1 - history_position].selected_objects.length; i++) {
+           selected_objects.push(working_area[state_history[state_history.length - 1 - history_position].selected_objects[i]])
+        }
+        aux_import()
+        repaint()
+     }
+     
+     function aux_import() {
+        for (var i = 0; i < working_area.length; i++) {
+           assignDrawingMethod(working_area[i])
+        }
+        fixPositions()
+        for (var i = 0; i < connections.length; i++) {
+           assignDrawingMethod(connections[i])
+           for (var j = 0; j < working_area.length; j++) {
+              if (equals(connections[i].from, working_area[j])) {
+                 connections[i].from = working_area[j]
+                 continue
+              }
+              if (equals(connections[i].to, working_area[j])) {
+                 connections[i].to = working_area[j]
+                 continue
+              }
+           }
+           for (var j = 0; j < connections[i].points.length; j++) {
+               connections[i].points[j].connection = connections[i]
+           }
+        }
+     }
+     
+     var state_history = []
 
      function hexToDec(n) {
          return Number(parseInt(n+'',16)).toString(10)

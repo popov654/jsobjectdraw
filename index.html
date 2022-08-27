@@ -3,9 +3,11 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=cp1251">
         <title>JSObjectDraw Editor</title>
-        <script type="text/javascript" src="wz_jsgraphics.js"></script>
+        <script type="text/javascript" src="backend/wz_jsgraphics.js"></script>
+        <script type="text/javascript" src="backend/canvas.js"></script>
         <script type="text/javascript" src="js_objectdraw.js"></script>
         <script type="text/javascript" src="jscolor/jscolor.js"></script>
+        <script type="text/javascript" src="lib/xdrag.js"></script>
         <link rel="stylesheet" type="text/css" href="style.css" />
         <script type="text/javascript">
 
@@ -254,6 +256,7 @@
                          }
                      }
                      repaint()
+                     updateHistory()
                  }
              }
 
@@ -284,7 +287,33 @@
                      current_connection.lineColor = document.getElementById('connectionColor').value
                      current_connection.arrType = document.getElementById('arrowType').value
                      repaint()
+                     updateHistory()
                  }
+             }
+             
+             function fillObjectsList() {
+                document.getElementById('allObjects').innerHTML = ''
+                var str = ''
+                for (var i = 0; i < working_area.length; i++) {
+                   var title = working_area[i].type
+                   title = title.slice(0,1).toUpperCase() + title.slice(1)
+                   if (title == 'Text' && working_area[i].text.length) {
+                      title += ': ' + working_area[i].text
+                   }
+                   str += '<div><div class="color" style="background: ' + working_area[i].color + '"></div><div class="label">' + title + '</div></div>'
+                }
+                document.getElementById('allObjects').innerHTML = str
+             }
+
+             function openObjectsDialog() {
+                 document.getElementById('darkBackground').style.display = 'block'
+                 document.getElementById('objectsDialog').style.display = 'block'
+                 fillObjectsList()
+             }
+
+             function closeObjectsDialog() {
+                 document.getElementById('darkBackground').style.display = 'none'
+                 document.getElementById('objectsDialog').style.display = 'none'
              }
 
              function openExportDialog() {
@@ -550,12 +579,12 @@
              var timer0
 
              function init() {
-				 var canvas = document.getElementById('canvas')
-				 var menu = document.getElementById('menu')
-				 var items = document.getElementsByTagName('li')
+                 var canvas = document.getElementById('canvas')
+                 var menu = document.getElementById('menu')
+                 var items = document.getElementsByTagName('li')
                  canvas.onmousedown = function(event) { selectObject(event); document.getElementById('menu').style.display = 'none'; document.getElementById('menu2').style.display = 'none'}
                  canvas.onmousemove = function(event) { moveObject(event); moveDock(event); movePoint(event); moveVertex(event); }
-                 canvas.onmouseup = function(event) { if (temp) {selected_obj = temp; selected_objects.push(temp);} dropTempObject(event); setDock(); dropPoint(); dropVertex(); checkNumberOfSelectedObjects(); updatePalettes(); document.getElementById('objectPalette').obj = selected_obj }
+                 canvas.onmouseup = function(event) { if (temp) { selected_obj = temp; selected_objects.push(temp); } dropTempObject(event); setDock(); dropPoint(); dropVertex(); checkNumberOfSelectedObjects(); updatePalettes(); document.getElementById('objectPalette').obj = selected_obj }
                  canvas.onclick = function(event) { createDockPoint(event); resetTimers() }
                  canvas.oncontextmenu = function(event) {
                     //if (selected_obj == null) return false;
@@ -609,7 +638,7 @@
                     if (evt.repeat) return
                     if (document.getElementById('darkBackground').style.display != 'block' && target.tagName.toLowerCase() != 'input') {
                        if (code == 46 && !editText) {
-                          for (var i = 0; i < selected_objects.length; i++) {
+                          for (var i = 0; i < selected_objects.length; ) {
                              removeObject(selected_objects[i])
                           }
                           checkNumberOfSelectedObjects()
@@ -649,6 +678,14 @@
                           moveVertexWithKey(code)
                           movePointWithKey(code)
                        }
+                       if (evt.ctrlKey && code == 90) {
+                          if (!evt.shiftKey) historyBackward()
+                          else historyForward()
+                       }
+                       if (evt.ctrlKey && code == 76) {
+                          openObjectsDialog()
+                          evt.preventDefault()
+                       }
                     }
                  }
                  document.onkeyup = function(event) {
@@ -681,8 +718,22 @@
                              break
                        }
                        clearTimeout(timer0)
+                       updateHistory()
                     }
                  }
+                 var last_z_pos = -1
+                 addEventHandler(document.getElementById('allObjects'), 'reorder', function(event) {
+                    console.log(event.detail)
+                    if (last_z_pos == -1) last_z_pos = event.detail.from
+                    var obj = working_area[last_z_pos]
+                    working_area.splice(last_z_pos, 1)
+                    working_area.splice(event.detail.to, 0, obj)
+                    last_z_pos = event.detail.to
+                    repaint()
+                 })
+                 addEventHandler(document.getElementById('allObjects'), 'reordercomplete', function(event) {
+                    last_z_pos = -1
+                 })
                  if (document.all) {
                     document.getElementById('canvas').attachEvent("onmousemove", updateCursor)
                     document.getElementById('canvas').attachEvent("onmousemove", resizeObject)
@@ -784,15 +835,30 @@
                     this.style.backgroundColor = '#C7601C'
                  }
                  Initialize('canvas');
-                 var jg = getContext();
-                 jg.drawImage("img/logo.png", getClientWidth() / 2.1 - 140, getClientHeight() / 2.4 - 100, 280, 200);
+                 
+                 var drawImage = function(imgSrc, x, y, w, h, a)
+                 {
+                    var html = '<div id="splashlogo" style="position:absolute;'+
+                       'left:' + x + 'px;'+
+                       'top:' + y + 'px;'+
+                       'width:' +  w + ';'+
+                       'height:' + h + ';">'+
+                       '<img src="' + imgSrc + '" width="' + w + '" height="' + h + '"' + (a? (' '+a) : '') + '>'+
+                       '</div>';
+                    var el = document.createElement('div')
+                    document.getElementById('canvas').appendChild(el)
+                    el.outerHTML = html
+                 };
+                 
+                 drawImage("img/logo.png", getClientWidth() / 2.1 - 140, getClientHeight() / 2.4 - 100, 280, 200);
                  var t = 1.0
                  setTimeout(function() {
                      var timer = setInterval(function() {
                          t -= 0.05
-                         setElementOpacity(document.images[0], t)
+                         setElementOpacity(document.getElementById('splashlogo'), t)
                          if (t <= 0) {
-                             setElementOpacity(document.images[0], 0)
+                             setElementOpacity(document.getElementById('splashlogo'), 0)
+                             document.getElementById('splashlogo').parentNode.removeChild(document.getElementById('splashlogo'))
                              clearInterval(timer)
                          }
                      }, 30)
@@ -807,37 +873,21 @@
                  dragging = false
 
                  for (var i = 0; i < items.length; i++) {
-                    if (document.all) {
-                       items[i].attachEvent("onmouseover", function(x) { return function() {items[x].style.backgroundColor = '#00b'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#fefefe'}}(i))
-                       items[i].attachEvent("onmouseout",  function(x) { return function() {items[x].style.backgroundColor = '#ccc'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#000'}}(i))
-                    } else {
-                       items[i].addEventListener("mouseover", function(x) { return function() {items[x].style.backgroundColor = '#00b'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#fefefe'}}(i), false)
-                       items[i].addEventListener("mouseout",  function(x) { return function() {items[x].style.backgroundColor = '#ccc'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#000'}}(i), false)
-                    }
+                    addEventHandler(items[i], "mouseover", function(x) { return function() {items[x].style.backgroundColor = '#00b'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#fefefe'}}(i))
+                    addEventHandler(items[i], "mouseout",  function(x) { return function() {items[x].style.backgroundColor = '#ccc'; if (x==0 && !multiple) items[x].style.color = '#828282'; else items[x].style.color = '#000'}}(i))
                  }
-                 if (document.all) {
-                     items[0].attachEvent("onmousedown", function() { if (!multiple) return; main_obj = getObjectByCoordsArray(coords); repaint(); document.getElementById('menu').style.display = 'none' })
-                     items[1].attachEvent("onmouseup", function() { openTextBox(); document.getElementById('menu').style.display = 'none' })
-                     items[2].attachEvent("onmouseup", function() { openFontDialog() })
-                     items[3].attachEvent("onmousedown", function() { bringToFront(selected_obj); selected_obj.draw(); document.getElementById('menu').style.display = 'none' })
-                     items[4].attachEvent("onmousedown", function() { sendToBack(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
-                     items[5].attachEvent("onmouseup", function() { copyObjects(coords[0], coords[1]); document.getElementById('menu').style.display = 'none' })
-                     items[6].attachEvent("onmouseup", function() { transform = true; equalize(selected_obj); calculatePoints(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
-                     items[7].attachEvent("onmouseup", function() { openBorderDialog() })
-                     items[8].attachEvent("onmousedown", function() { for (var i = 0; i < selected_objects.length; i++) {removeObject(selected_objects[i])}; document.getElementById('menu').style.display = 'none'; updatePalettes() })
-                     items[9].attachEvent("onmousedown", function() { pasteObjects(coords[0], coord[1]); document.getElementById('menu2').style.display = 'none' })
-                 } else {
-                     items[0].addEventListener("mousedown", function() { if (!multiple) return; main_obj = getObjectByCoordsArray(coords); repaint(); document.getElementById('menu').style.display = 'none' }, false)
-                     items[1].addEventListener("mouseup",   function() { openTextBox(); document.getElementById('menu').style.display = 'none' })
-                     items[2].addEventListener("mouseup", function() { openFontDialog() }, false)
-                     items[3].addEventListener("mousedown", function() { bringToFront(selected_obj); selected_obj.draw(); document.getElementById('menu').style.display = 'none' }, false)
-                     items[4].addEventListener("mousedown", function() { sendToBack(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' }, false)
-                     items[5].addEventListener("mouseup", function() { copyObjects(coords[0], coords[1]); document.getElementById('menu').style.display = 'none' }, false)
-                     items[6].addEventListener("mouseup", function() { transform = true; equalize(selected_obj); calculatePoints(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' }, false)
-                     items[7].addEventListener("mouseup", function() { openBorderDialog() }, false)
-                     items[8].addEventListener("mousedown", function() { for (var i = 0; i < selected_objects.length; i++) {removeObject(selected_objects[i])}; document.getElementById('menu').style.display = 'none'; updatePalettes() }, false)
-                     items[9].addEventListener("mouseup", function() { pasteObjects(coords[0], coords[1]); document.getElementById('menu2').style.display = 'none' }, false)
-                 }
+                 
+                 addEventHandler(items[0], "mousedown", function() { if (!multiple) return; main_obj = getObjectByCoordsArray(coords); repaint(); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[1], "mouseup", function() { openTextBox(); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[2], "mouseup", function() { openFontDialog() })
+                 addEventHandler(items[3], "mousedown", function() { bringToFront(selected_obj); selected_obj.draw(); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[4], "mousedown", function() { sendToBack(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[5], "mouseup", function() { copyObjects(coords[0], coords[1]); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[6], "mouseup", function() { transform = true; equalize(selected_obj); calculatePoints(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[7], "mouseup", function() { openBorderDialog() })
+                 addEventHandler(items[8], "mousedown", function() { for (var i = 0; i < selected_objects.length; i++) {removeObject(selected_objects[i])}; document.getElementById('menu').style.display = 'none'; updatePalettes() })
+                 addEventHandler(items[9], "mousedown", function() { pasteObjects(coords[0], coord[1]); document.getElementById('menu2').style.display = 'none' })
+                 
                  document.getElementById('textBox').style.display = 'none'
                  document.getElementById('objectX').disabled = true
                  document.getElementById('objectY').disabled = true
@@ -893,9 +943,17 @@
                      document.getElementById('objectPalette').style.width = '694px'
                      document.getElementById('rotationPalette').style.width = '186px'
                      if (document.all) {
-			             document.getElementById('canvas').style.height = screen.height > 900 ? '92.8%' : '91.6%'
+                        document.getElementById('canvas').style.height = screen.height > 900 ? '92.8%' : '91.6%'
                      }
                  }
+             }
+
+             function addEventHandler(el, type, func) {
+                if (window.attachEvent) {
+                   el.attachEvent('on' + type, func)
+                } else {
+                   el.addEventListener(type, func)
+                }
              }
 
              function getClientWidth() {
@@ -970,123 +1028,130 @@
         </div>
         <textarea id="textBox"></textarea>
 
-	    <div id="menu">
-	       <li class="item">Set as main</li>
-	       <li class="item">Edit</li>
-	       <li class="item">Font...</li>
-	       <li class="item">Bring to front</li>
-	       <li class="item">Send to back</li>
-	       <li class="item">Copy</li>
-	       <li class="item">Transform</li>
-	       <li class="item">Border...</li>
-	       <li class="item">Remove</li>
-	    </div>
+        <div id="menu">
+          <li class="item">Set as main</li>
+          <li class="item">Edit</li>
+          <li class="item">Font...</li>
+          <li class="item">Bring to front</li>
+          <li class="item">Send to back</li>
+          <li class="item">Copy</li>
+          <li class="item">Transform</li>
+          <li class="item">Border...</li>
+          <li class="item">Remove</li>
+        </div>
 
-	    <div id="menu2">
-	       <li class="item">Paste</li>
-	    </div>
+        <div id="menu2">
+          <li class="item">Paste</li>
+        </div>
 
-	    <div id="darkBackground"></div>
-	    <div id="borderSettingsDialog">
-	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Border settings</span>
-	          <div class="closeButton" onclick="closeBorderDialog(false)">X</div>
-	       </div>
-	       <div id="borderWidthWrapper">Thickness<input type="text" id="borderWidth" maxlength="1" /></div>
-	       <div class="okButton" onclick="closeBorderDialog(true)">OK</div>
-	    </div>
-	    <div id="borderColorWrapper">Color<input type="text" id="borderColor" maxlength="7" /><input id="picker2" class="color {valueElement:'borderColor', pickerPosition:'right', pickerClosable:true, hash:true}"></div>
-	    <div id="fontSettingsDialog">
-	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Font settings</span>
-	          <div class="closeButton" onclick="closeFontDialog(false)">X</div>
-	       </div>
-	       <div id="switchBold" class="button">B</div>
-	       <div id="switchItalic" class="button">I</div>
-	       <div id="switchUnderline" class="button">U</div>
-	       <div id="fontSampleWrapper"><div id="fontSample">Sample</div></div>
-	       <div id="fontSizeWrapper">Size<input type="text" id="fontSize" maxlength="2" /></div>
-	       <div id="fontFamilyWrapper">Font
-	       <select name="fontFamily" id="fontFamily" onchange="updateFont(this)">
-	         <option value="Arial, Helvetica, sans-serif" style="font-family: Arial, Helvetica, sans-serif;">Arial</option>
-	         <option value="Arial Black, Arial Black, Gadget, sans-serif" style="font-family: Arial Black, Arial Black, Gadget, sans-serif">Arial Black</option>
-	         <option value="Comic Sans MS, Comic Sans MS5, cursive" style="font-family: Comic Sans MS, cursive">Comic Sans MS</option>
-	         <option value="Courier New, Courier6, monospace" style="font-family: Courier New, Courier6, monospace">Courier New</option>
-	         <option value="Georgia, Georgia1, serif" style="font-family: Georgia, Georgia1, serif">Georgia</option>
-	         <option value="Graublau Sans Web" style="font-family: Graublau Sans Web">Graublau Sans</option>
-	         <option value="Gentium" style="font-family: Gentium">Gentium</option>
-	         <option value="Impact, Impact5, Charcoal6, sans-serif" style="font-family: Impact, Impact5, Charcoal6, sans-serif">Impact</option>
-	         <option value="Lucida Console, Monaco5, monospace" style="font-family: Lucida Console, Monaco5, monospace">Lucida Console</option>
-	         <option value="Lucida Sans Unicode, Lucida Grande, sans-serif" style="font-family: Lucida Sans Unicode, Lucida Grande, sans-serif">Lucida Grande</option>
-	         <option value="Palatino Linotype, Book Antiqua3, Palatino6, serif" style="font-family: Palatino Linotype, Book Antiqua3, Palatino6, serif">Palatino Linotype</option>
-	         <option value="Tahoma, Geneva, sans-serif" style="font-family: Tahoma, Geneva, sans-serif">Tahoma</option>
-	         <option value="Trebuchet MS1, Helvetica, sans-serif" style="font-family: Trebuchet MS1, Helvetica, sans-serif">Trebuchet MS</option>
-	         <option value="Verdana, Geneva, sans-serif" style="font-family: Verdana, Geneva, sans-serif">Verdana</option>
-	      </select>
-	      </div>
-	       <div class="okButton" onclick="closeFontDialog(true)">OK</div>
-	    </div>
-	    <div id="connectionSettingsDialog">
-	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Connection settings</span>
-	          <div class="closeButton" onclick="closeConnectionDialog(false)">X</div>
-	       </div>
-	       <div id="mode1" class="button">&#8594;</div>
-	       <div id="mode2" class="button">&#8592;</div>
-	       <div id="mode3" class="button">&#8596;</div>
-	       <div id="connectionWidthWrapper">Thickness<input type="text" id="connectionWidth" maxlength="1" /></div>
-	       <div class="okButton" onclick="closeConnectionDialog(true)">OK</div>
-	    </div>
-	    <div id="connectionColorWrapper">Color<input type="text" id="connectionColor" maxlength="7" /><input id="picker3" class="color {valueElement:'connectionColor', pickerClosable:true, hash:true}"></div>
-	    <input id="arrowType" type="hidden" value="" />
+        <div id="darkBackground"></div>
+        <div id="borderSettingsDialog">
+           <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Border settings</span>
+              <div class="closeButton" onclick="closeBorderDialog(false)">X</div>
+           </div>
+           <div id="borderWidthWrapper">Thickness<input type="text" id="borderWidth" maxlength="1" /></div>
+           <div class="okButton" onclick="closeBorderDialog(true)">OK</div>
+        </div>
+        <div id="borderColorWrapper">Color<input type="text" id="borderColor" maxlength="7" /><input id="picker2" class="color {valueElement:'borderColor', pickerPosition:'right', pickerClosable:true, hash:true}"></div>
+        <div id="fontSettingsDialog">
+           <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Font settings</span>
+              <div class="closeButton" onclick="closeFontDialog(false)">X</div>
+           </div>
+           <div id="switchBold" class="button">B</div>
+           <div id="switchItalic" class="button">I</div>
+           <div id="switchUnderline" class="button">U</div>
+           <div id="fontSampleWrapper"><div id="fontSample">Sample</div></div>
+           <div id="fontSizeWrapper">Size<input type="text" id="fontSize" maxlength="2" /></div>
+           <div id="fontFamilyWrapper">Font
+           <select name="fontFamily" id="fontFamily" onchange="updateFont(this)">
+             <option value="Arial, Helvetica, sans-serif" style="font-family: Arial, Helvetica, sans-serif;">Arial</option>
+             <option value="Arial Black, Arial Black, Gadget, sans-serif" style="font-family: Arial Black, Arial Black, Gadget, sans-serif">Arial Black</option>
+             <option value="Comic Sans MS, Comic Sans MS5, cursive" style="font-family: Comic Sans MS, cursive">Comic Sans MS</option>
+             <option value="Courier New, Courier6, monospace" style="font-family: Courier New, Courier6, monospace">Courier New</option>
+             <option value="Georgia, Georgia1, serif" style="font-family: Georgia, Georgia1, serif">Georgia</option>
+             <option value="Graublau Sans Web" style="font-family: Graublau Sans Web">Graublau Sans</option>
+             <option value="Gentium" style="font-family: Gentium">Gentium</option>
+             <option value="Impact, Impact5, Charcoal6, sans-serif" style="font-family: Impact, Impact5, Charcoal6, sans-serif">Impact</option>
+             <option value="Lucida Console, Monaco5, monospace" style="font-family: Lucida Console, Monaco5, monospace">Lucida Console</option>
+             <option value="Lucida Sans Unicode, Lucida Grande, sans-serif" style="font-family: Lucida Sans Unicode, Lucida Grande, sans-serif">Lucida Grande</option>
+             <option value="Palatino Linotype, Book Antiqua3, Palatino6, serif" style="font-family: Palatino Linotype, Book Antiqua3, Palatino6, serif">Palatino Linotype</option>
+             <option value="Tahoma, Geneva, sans-serif" style="font-family: Tahoma, Geneva, sans-serif">Tahoma</option>
+             <option value="Trebuchet MS1, Helvetica, sans-serif" style="font-family: Trebuchet MS1, Helvetica, sans-serif">Trebuchet MS</option>
+             <option value="Verdana, Geneva, sans-serif" style="font-family: Verdana, Geneva, sans-serif">Verdana</option>
+          </select>
+          </div>
+          <div class="okButton" onclick="closeFontDialog(true)">OK</div>
+       </div>
+       <div id="connectionSettingsDialog">
+          <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Connection settings</span>
+             <div class="closeButton" onclick="closeConnectionDialog(false)">X</div>
+          </div>
+          <div id="mode1" class="button">&#8594;</div>
+          <div id="mode2" class="button">&#8592;</div>
+          <div id="mode3" class="button">&#8596;</div>
+          <div id="connectionWidthWrapper">Thickness<input type="text" id="connectionWidth" maxlength="1" /></div>
+          <div class="okButton" onclick="closeConnectionDialog(true)">OK</div>
+       </div>
+       <div id="objectsDialog">
+          <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Objects</span>
+             <div class="closeButton" onclick="closeConnectionDialog(false)">X</div>
+          </div>
+          <div id="allObjects" class="list reorder"><div>Item 1</div><div>Item 2</div><div>Item 3</div><div>Item 4</div></div>
+          <div class="okButton" onclick="closeObjectsDialog()">Close</div>
+       </div>
+       <div id="connectionColorWrapper">Color<input type="text" id="connectionColor" maxlength="7" /><input id="picker3" class="color {valueElement:'connectionColor', pickerClosable:true, hash:true}"></div>
+       <input id="arrowType" type="hidden" value="" />
 
-	    <div id="exportDialog">
-	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Import/export</span>
-	          <div class="closeButton" onclick="closeExportDialog(false)">X</div>
-	       </div>
-	       <textarea id="clipboard"></textarea>
-	       <div style="position: absolute; width: 100%; bottom: 12px; text-align: center;"><div class="okButton2" onclick="closeExportDialog(true)">Import</div><div class="cancelButton" onclick="closeExportDialog(false)">Close</div></div>
-	    </div>
+       <div id="exportDialog">
+          <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Import/export</span>
+             <div class="closeButton" onclick="closeExportDialog(false)">X</div>
+          </div>
+          <textarea id="clipboard"></textarea>
+          <div style="position: absolute; width: 100%; bottom: 12px; text-align: center;"><div class="okButton2" onclick="closeExportDialog(true)">Import</div><div class="cancelButton" onclick="closeExportDialog(false)">Close</div></div>
+       </div>
 
-	    <div id="errorDialog">
-	       <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Error</span>
-	          <div class="closeButton" onclick="closeExportDialog()">X</div>
-	       </div>
-	       <div style="margin-top: 14px; margin-left: 4%; width: 92%; text-align: center;">An error occurred during the import</div>
-	       <div style="position: absolute; width: 100%; bottom: 12px; text-align: center;"><div class="okButton2" onclick="closeErrorDialog()">OK</div></div>
-	    </div>
+       <div id="errorDialog">
+          <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Error</span>
+             <div class="closeButton" onclick="closeExportDialog()">X</div>
+          </div>
+          <div style="margin-top: 14px; margin-left: 4%; width: 92%; text-align: center;">An error occurred during the import</div>
+          <div style="position: absolute; width: 100%; bottom: 12px; text-align: center;"><div class="okButton2" onclick="closeErrorDialog()">OK</div></div>
+       </div>
 
-	    <div id="objectXWrapper">X<input type="text" id="objectX" maxlength="3" /></div>
-	    <div id="objectYWrapper">Y<input type="text" id="objectY" maxlength="3" /></div>
-	    <div id="objectWidthWrapper">Width<input type="text" id="objectWidth" maxlength="3" /></div>
-	    <div id="objectHeightWrapper">Height<input type="text" id="objectHeight" maxlength="3" /></div>
-	    <div id="objectColorWrapper">Color<input type="text" id="objectColor" maxlength="7" /><input id="picker1" class="color {valueElement:'objectColor', pickerClosable:true, hash:true}"></div>
-	    <div class="palette" id="objectPalette" style="right: 59px; top: 73px; width: 637px">Object</div>
-	    <div class="palette" id="alignPalette" style="width: 320px; padding-top:4px;"></div>
-	    <div class="palette" id="connectionPalette" style="padding-top:4px;"></div>
-	    <div class="palette" id="textAlignPalette" style="padding-top:4px;"></div>
-	    <div class="palette" id="rotationPalette" style="left:43%; width: 16%; padding-top:4px;"></div>
-	    <div id="objectAngleWrapper">Angle<input type="text" id="objectAngle" maxlength="3" /><div id="degrees">&deg;</div></div>
-	    <div id="alignWrapper">
-	       <button style="display: none;"><img src="" /></button>
-	       <button onclick="alignObjects('l')"><img src="img/align_left.png" /></button>
-	       <button onclick="alignObjects('c')"><img src="img/align_center.png" /></button>
-	       <button onclick="alignObjects('r')"><img src="img/align_right.png" /></button>
-	       <button onclick="alignObjects('t')"><img src="img/align_top.png" /></button>
-	       <button onclick="alignObjects('m')"><img src="img/align_middle.png" /></button>
-	       <button onclick="alignObjects('b')"><img src="img/align_bottom.png" /></button>
-	    </div>
-	    <div id="connectionWrapper">
-	       <button style="display: none;"><img src="" /></button>
-	       <button onclick="addConnection(); showConnectionPalette()"><img src="img/create_link.png" /></button>
-	       <button onclick="removeConnection(); showConnectionPalette()"><img src="img/remove_link.png" /></button>
-	       <button onclick="openConnectionDialog()"><img src="img/edit.png" /></button>
-	    </div>
-	    <div id="textAlignWrapper">
-	       <button style="display: none;"><img src="" /></button>
-	       <button onclick="setTextAlign('left')"><img src="img/text_align_left.png" /></button>
-	       <button onclick="setTextAlign('center')"><img src="img/text_align_center.png" /></button>
-	       <button onclick="setTextAlign('right')"><img src="img/text_align_right.png" /></button>
-	    </div>
-	    <div id="exportButton" onclick="openExportDialog()"></div>
-	    <div id="clearButton" onclick="clearWorksheet()"></div>
-	    <div id="tooltip"></div>
+       <div id="objectXWrapper">X<input type="text" id="objectX" maxlength="3" /></div>
+       <div id="objectYWrapper">Y<input type="text" id="objectY" maxlength="3" /></div>
+       <div id="objectWidthWrapper">Width<input type="text" id="objectWidth" maxlength="3" /></div>
+       <div id="objectHeightWrapper">Height<input type="text" id="objectHeight" maxlength="3" /></div>
+       <div id="objectColorWrapper">Color<input type="text" id="objectColor" maxlength="7" /><input id="picker1" class="color {valueElement:'objectColor', pickerClosable:true, hash:true}"></div>
+       <div class="palette" id="objectPalette" style="right: 59px; top: 73px; width: 637px">Object</div>
+       <div class="palette" id="alignPalette" style="width: 320px; padding-top:4px;"></div>
+       <div class="palette" id="connectionPalette" style="padding-top:4px;"></div>
+       <div class="palette" id="textAlignPalette" style="padding-top:4px;"></div>
+       <div class="palette" id="rotationPalette" style="left:43%; width: 16%; padding-top:4px;"></div>
+       <div id="objectAngleWrapper">Angle<input type="text" id="objectAngle" maxlength="3" /><div id="degrees">&deg;</div></div>
+       <div id="alignWrapper">
+          <button style="display: none;"><img src="" /></button>
+          <button onclick="alignObjects('l')"><img src="img/align_left.png" /></button>
+          <button onclick="alignObjects('c')"><img src="img/align_center.png" /></button>
+          <button onclick="alignObjects('r')"><img src="img/align_right.png" /></button>
+          <button onclick="alignObjects('t')"><img src="img/align_top.png" /></button>
+          <button onclick="alignObjects('m')"><img src="img/align_middle.png" /></button>
+          <button onclick="alignObjects('b')"><img src="img/align_bottom.png" /></button>
+       </div>
+       <div id="connectionWrapper">
+          <button style="display: none;"><img src="" /></button>
+          <button onclick="addConnection(); showConnectionPalette()"><img src="img/create_link.png" /></button>
+          <button onclick="removeConnection(); showConnectionPalette()"><img src="img/remove_link.png" /></button>
+          <button onclick="openConnectionDialog()"><img src="img/edit.png" /></button>
+       </div>
+       <div id="textAlignWrapper">
+          <button style="display: none;"><img src="" /></button>
+          <button onclick="setTextAlign('left')"><img src="img/text_align_left.png" /></button>
+          <button onclick="setTextAlign('center')"><img src="img/text_align_center.png" /></button>
+          <button onclick="setTextAlign('right')"><img src="img/text_align_right.png" /></button>
+       </div>
+       <div id="exportButton" onclick="openExportDialog()"></div>
+       <div id="clearButton" onclick="clearWorksheet()"></div>
+       <div id="tooltip"></div>
     </body>
 </html>
