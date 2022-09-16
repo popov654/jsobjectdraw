@@ -1,6 +1,6 @@
 /* This notice must be untouched at all times.
 
-js_objectdraw.js    v. 1.0a
+js_objectdraw.js    v. 1.0b
 Based on wz_jsgraphics.js (JavaScript VectorDraw Library by Walter Zorn, Copyright (c) 2002-2004)
 
 The latest version is available at
@@ -674,6 +674,22 @@ or see http://www.gnu.org/copyleft/lesser.html
      }
      
      var debounce_timer = null
+     
+     var f = function() {
+        if (debounce_timer) {
+           clearTimeout(debounce_timer)
+           debounce_timer = null
+           updateHistory()
+        }
+     }
+     
+     if (document.addEventListener) {
+        document.addEventListener('mouseup', f)
+        document.addEventListener('keyup', f)
+     } else {
+        document.attachEvent('onmouseup', f)
+        document.attachEvent('onkeyup', f)
+     }
 
      function initResize() {
          var cur = document.getElementById(div_id).style.cursor
@@ -854,6 +870,7 @@ or see http://www.gnu.org/copyleft/lesser.html
              } else {
                 temp = new Shape(el.type, el.color, x2 + el.x - left, y2 + el.y - top, el.width, el.height)
              }
+             temp.id = getNewObjectId()
              copyProperties(el, temp)   //Copy properties
              working_area.push(temp)
              selected_objects.push(temp)
@@ -934,9 +951,6 @@ or see http://www.gnu.org/copyleft/lesser.html
          for (var i = 0; i < selected_objects.length; i++) {
             if (selected_objects[i]) displayOutline(selected_objects[i])
          }
-         if (selected_obj) {
-            displayOutline(selected_obj)
-         }
      }
      
      function repaintSelectedObjects() {
@@ -1004,7 +1018,91 @@ or see http://www.gnu.org/copyleft/lesser.html
 
          if (e.which != 1) return;
          
-         if (!e.shiftKey && !e.ctrlKey && selected_obj && selected_obj.x <= x - 6 && x <= selected_obj.x + selected_obj.width + 7 &&
+         var ignore_group = false
+         var group_toggle = -1
+         
+         // Check group
+         if (!transform && groups.length && obj && obj instanceof Shape) {
+            ignore_group = e.shiftKey && e.ctrlKey
+            if (!ignore_group) {
+               for (var i = 0; i < groups.length; i++) {
+                  if (groups[i].indexOf(obj) != -1) {
+                     var count = 0
+                     for (var j = 0; j < groups[i].length; j++) {
+                        if (selected_objects.indexOf(groups[i][j]) != -1) {
+                           count++
+                        }
+                     }
+                     if (count == groups[i].length && e.ctrlKey) group_toggle = 1
+                     else if (count == 0) group_toggle = 0
+                     
+                     for (var j = 0; j < groups[i].length; j++) {
+                        if (group_toggle == 0 && selected_objects.indexOf(groups[i][j]) == -1) {
+                           selected_objects.push(groups[i][j])
+                        } else if (group_toggle == 1) {
+                           for (var k = 0; k < selected_objects.length; k++) {
+                              if (selected_objects[k] == groups[i][j]) {
+                                 selected_objects.splice(k, 1)
+                                 break
+                              }
+                           }
+                        }
+                     }
+                     if (!selected_objects.length && group_toggle == 1) obj = null
+                  } else if (!e.ctrlKey) {
+                     for (var j = 0; j < groups[i].length; j++) {
+                        for (var k = 0; k < selected_objects.length; k++) {
+                           if (selected_objects[k] == groups[i][j]) {
+                              selected_objects.splice(k, 1)
+                              break
+                           }
+                        }
+                     }
+                  }
+               }
+            } else {
+               for (var i = 0; i < groups.length; i++) {
+                  if (groups[i].indexOf(obj) != -1) {
+                     var count = 0
+                     for (var j = 0; j < groups[i].length; j++) {
+                        if (selected_objects.indexOf(groups[i][j]) != -1) {
+                           count++
+                        }
+                     }
+                     
+                     for (var j = 0; j < groups[i].length; j++) {
+                        if (count < groups[i].length && selected_objects.indexOf(groups[i][j]) == -1) {
+                           selected_objects.push(groups[i][j])
+                        } else if (count == groups[i].length && groups[i][j] != obj) {
+                           for (var k = 0; k < selected_objects.length; k++) {
+                              if (selected_objects[k] == groups[i][j]) {
+                                 selected_objects.splice(k, 1)
+                                 break
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+         
+         
+         // Select underlying object
+         if (!transform && e.shiftKey && e.ctrlKey && !ignore_group) {
+            var obj2 = getObjectByCoords(e, true)
+            if (obj2) {
+               selected_objects.push(obj2)
+               jg.clearBottomLayer()
+               drawProtos()
+               for (var i = 0; i < selected_objects.length; i++) {
+                  displayOutline(selected_objects[i])
+               }
+               return
+            }
+         }
+         
+         if (!transform && selected_objects.length == 1 && !e.shiftKey && !e.ctrlKey && selected_obj && selected_obj.x <= x - 6 && x <= selected_obj.x + selected_obj.width + 7 &&
              selected_obj.y <= y - 6 && y <= selected_obj.y + selected_obj.height + 7) {
             dragging = true
             existing = true
@@ -1012,13 +1110,16 @@ or see http://www.gnu.org/copyleft/lesser.html
             temp = selected_obj
             drag_offsetX = x - selected_obj.x
             drag_offsetY = y - selected_obj.y
+            temp.x = obj.x
+            temp.y = obj.y
             return;
          }
 
          objectsToCopy = []
          xCopy = null
          yCopy = null
-
+         
+         
          if (editText && obj != selected_obj) {
              selected_obj.text = document.getElementById('textBox').value
              editText = false
@@ -1026,6 +1127,8 @@ or see http://www.gnu.org/copyleft/lesser.html
              document.getElementById('textBox').style.display = 'none'
              return;
          }
+         
+         setTimeout(clearSelection, 200)
 
          cur_dock_obj = getDockPointObj(x,y)
          var p = cur_dock_obj
@@ -1055,25 +1158,48 @@ or see http://www.gnu.org/copyleft/lesser.html
                  selected_obj = null
                  selected_objects = []
                  temp = new Shape(obj.type, obj.color, obj.x, obj.y, obj.width, obj.height)
-             } else if (e.shiftKey) {    // Copy selected objects
+             } else if (e.shiftKey && !e.ctrlKey) {    // Copy selected objects
+
+                 if (selected_objects.length == 0 && obj != null && obj instanceof Shape) {
+                    selected_objects.push(obj)
+                 }
 
                  selected_objects.sort(_sortFunc)
 
                  var new_array = []
                  var count = 0
+                 
+                 var map = {}
 
                  for (var i = 0; i < selected_objects.length; i++) {
                     if (selected_objects[i]) {
                        count++
                        var el = selected_objects[i]
                        temp = new Shape(el.type, el.color, el.x, el.y, el.width, el.height)
+                       temp.id = getNewObjectId()
                        copyProperties(el, temp)   //Copy properties
                        new_array.push(temp)
                        working_area.push(temp)
                        calculatePoints(temp)
+                       map[el.id] = temp
                     }
                  }
-
+                 
+                 for (var i = 0; i < groups.length; i++) {
+                    var c = 0
+                    for (var j = 0; j < selected_objects.length; j++) {
+                       if (groups[i].indexOf(selected_objects[j]) != -1) {
+                          c++
+                       }
+                    }
+                    if (c == groups[i].length) {
+                       var group = []
+                       for (var j = 0; j < groups[i].length; j++) {
+                          group.push(map[groups[i][j].id])
+                       }
+                       groups.push(group)
+                    }
+                 }
 
                  var length = connections.length
                  for (var i = 0; i < length; i++) {
@@ -1118,8 +1244,39 @@ or see http://www.gnu.org/copyleft/lesser.html
                     //return;
                  }
 
-             } else if (e.ctrlKey) {    //Select/unselect object
+             } else if (e.ctrlKey && group_toggle == -1 && !ignore_group) {  //Select/unselect object   
+                 //Select/unselect object
+                 
                  transform = false
+                 var deepest_obj = getDeepestSelectedObjectByCoords(e)
+                 if (deepest_obj) {
+                    for (var i = 0; i < groups.length; i++) {
+                       if (groups[i].indexOf(deepest_obj) != -1) {
+                          break
+                       }
+                    }
+                    for (var i = 0; i < selected_objects.length; i++) {
+                       if (selected_objects[i] == deepest_obj) {
+                          selected_objects.splice(i, 1)
+                          for (var j = i - 1; j >= 0; j--) {
+                             if (selected_objects[j]) {
+                                selected_obj = selected_objects[j]
+                                break;
+                             }
+                          }
+                          if (!selected_obj && selected_objects.length >= j) {
+                             selected_obj = selected_objects[j]
+                          }
+                          break
+                       }
+                    }
+                    jg.clearBottomLayer()
+                    drawProtos()
+                    for (var i = 0; i < selected_objects.length; i++) {
+                       displayOutline(selected_objects[i])
+                    }
+                    return
+                 }
                  for (var i = 0; i < selected_objects.length; i++) {
                     if (selected_objects[i] == obj) {
                        selected_objects[i] = null
@@ -1162,11 +1319,10 @@ or see http://www.gnu.org/copyleft/lesser.html
                     if (selected_objects[i] == obj) contains = true
                  }
 
-                 if (existing && !contains) {
+                 if (group_toggle < 1 && existing && !contains) {
                     selected_objects = []
                     selected_obj = obj
                     selected_objects.push(obj)
-                    repaint()
                  }
 
                  var count = 0
@@ -1184,6 +1340,7 @@ or see http://www.gnu.org/copyleft/lesser.html
                     lastY = y
                     selected_obj = obj
                     temp = null
+                    repaint()
                     return;
                  }
 
@@ -1221,8 +1378,7 @@ or see http://www.gnu.org/copyleft/lesser.html
                  temp.draw()
              }
 
-             if (temp) temp.draw()
-                else drawWorkingArea()
+             repaint()
          } else if ((cur == 'default' || cur == '') && !(current_connection && e.ctrlKey)) {   //Click on free space
              selected_obj = null
              selected_objects = []
@@ -1315,6 +1471,7 @@ or see http://www.gnu.org/copyleft/lesser.html
              calculatePoints(temp)
              working_area.push(temp)
              temp.color = new_color
+             temp.id = getNewObjectId()
          }
          existing = true
 
@@ -1324,6 +1481,14 @@ or see http://www.gnu.org/copyleft/lesser.html
          temp = null
          dragging = false
          drag_offsetX = drag_offsetY = 10;
+     }
+     
+     function getNewObjectId() {
+        var id = 0
+        for (var i = 0; i < working_area.length; i++) {
+           if (working_area[i].id > id) id = working_area[i].id
+        }
+        return id + 1
      }
 
      function moveDock(event) {
@@ -1607,7 +1772,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          return -1;
      }
 
-     function getObjectByCoords(event) {
+     function getObjectByCoords(event, skip_selected) {
          e = event || window.event
          coords = getCoords(e)
          x = coords[0]
@@ -1616,6 +1781,23 @@ or see http://www.gnu.org/copyleft/lesser.html
              if (!working_area[i]) continue;
              if (working_area[i].x - 6 <= x && x <= working_area[i].x + working_area[i].width + 7 &&
                  working_area[i].y - 6 <= y && y <= working_area[i].y + working_area[i].height + 7) {
+                 if (skip_selected && selected_objects.indexOf(working_area[i]) != -1) continue
+                 return working_area[i];
+             }
+         }
+         return null;
+     }
+     
+     function getDeepestSelectedObjectByCoords(event) {
+         e = event || window.event
+         coords = getCoords(e)
+         x = coords[0]
+         y = coords[1]
+         for (var i = 0; i < working_area.length; i++) {
+             if (!working_area[i]) continue;
+             if (working_area[i].x - 6 <= x && x <= working_area[i].x + working_area[i].width + 7 &&
+                 working_area[i].y - 6 <= y && y <= working_area[i].y + working_area[i].height + 7) {
+                 if (selected_objects.indexOf(working_area[i]) == -1) continue
                  return working_area[i];
              }
          }
@@ -1865,18 +2047,23 @@ or see http://www.gnu.org/copyleft/lesser.html
              case "polygon":
                 obj.draw = function() {
                    if (backend == 'canvas') canvas = prepareCanvas(obj)
-                   var x = canvas ? pad : this.x
-                   var y = canvas ? pad : this.y
                    for (var i = 0; i < this.vNum; i++) {
-                       this.xPoints[i] = x + this.offsetsX[i]
-                       this.yPoints[i] = y + this.offsetsY[i]
+                       this.xPoints[i] = this.x + this.offsetsX[i]
+                       this.yPoints[i] = this.y + this.offsetsY[i]
+                   }
+                   var points = [this.xPoints.slice(), this.yPoints.slice()]
+                   if (backend == 'canvas') {
+                      for (var i = 0; i < this.vNum; i++) {
+                         points[0][i] = this.offsetsX[i] + pad
+                         points[1][i] = this.offsetsY[i] + pad
+                      }
                    }
                    jg.setColor(this.color, canvas)
-                   jg.fillPolygon(this.xPoints, this.yPoints, canvas);
+                   jg.fillPolygon(points[0], points[1], canvas);
                    if (this.borderWidth > 0) {
                        jg.setColor(this.borderColor, canvas);
                        jg.setStroke(this.borderWidth, canvas);
-                       jg.drawPolygon(this.xPoints, this.yPoints, canvas);
+                       jg.drawPolygon(points[0], points[1], canvas);
                    }
                    jg.paint()
                 }
@@ -2317,6 +2504,7 @@ or see http://www.gnu.org/copyleft/lesser.html
      }
      
      var state_history = []
+     
 
      function hexToDec(n) {
          return Number(parseInt(n+'',16)).toString(10)
@@ -2334,4 +2522,13 @@ or see http://www.gnu.org/copyleft/lesser.html
          green = decToHex(255 - (255 - parseInt(hexToDec(green))) / 3)
          blue = decToHex(255 - (255 - parseInt(hexToDec(blue))) / 3)
          return '#' + red + green + blue
+     }
+     
+     function clearSelection() {
+        if(document.selection && document.selection.empty) {
+           document.selection.empty();
+        } else if(window.getSelection) {
+           var sel = window.getSelection();
+           sel.removeAllRanges();
+        }
      }

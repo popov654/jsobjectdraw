@@ -686,6 +686,11 @@
                           openObjectsDialog()
                           evt.preventDefault()
                        }
+                       if (evt.ctrlKey && code == 71) {
+                          if (!evt.shiftKey) groupObjects()
+                          else ungroupObjects()
+                          evt.preventDefault()
+                       }
                     }
                  }
                  document.onkeyup = function(event) {
@@ -734,37 +739,22 @@
                  addEventHandler(document.getElementById('allObjects'), 'reordercomplete', function(event) {
                     last_z_pos = -1
                  })
-                 if (document.all) {
-                    document.getElementById('canvas').attachEvent("onmousemove", updateCursor)
-                    document.getElementById('canvas').attachEvent("onmousemove", resizeObject)
-                    document.getElementById('canvas').attachEvent("onmousedown", initResize)
-                    document.getElementById('canvas').attachEvent("onmousedown", updatePalettes)
-                    document.getElementById('objectX').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeX(this.value) })
-                    document.getElementById('objectY').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeY(this.value) })
-                    document.getElementById('objectWidth').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeWidth(this.value) })
-                    document.getElementById('objectHeight').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeHeight(this.value) })
-                    document.getElementById('objectColor').attachEvent("onblur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeColor(this.value); document.getElementById('picker1').color.fromString(this.value) })
-                    document.getElementById('objectColor').attachEvent("onchange", function() { changeColor(this.value); updateBorder(this) })
-                    document.getElementById('borderColor').attachEvent("onblur", function() { document.getElementById('picker2').color.fromString(this.value) })
-                    document.getElementById('borderColor').attachEvent("onchange", function() { updateBorder(this) })
-                    document.getElementById('connectionColor').attachEvent("onblur", function() { document.getElementById('picker3').color.fromString(this.value) })
-                    document.getElementById('connectionColor').attachEvent("onchange", function() { updateBorder(this) })
-                 } else {
-                    document.getElementById('canvas').addEventListener("mousemove", updateCursor, false)
-                    document.getElementById('canvas').addEventListener("mousemove", resizeObject, false)
-                    document.getElementById('canvas').addEventListener("mousedown", initResize, false)
-                    document.getElementById('canvas').addEventListener("mousedown", updatePalettes, false)
-                    document.getElementById('objectX').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeX(this.value) }, false)
-                    document.getElementById('objectY').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeY(this.value) }, false)
-                    document.getElementById('objectWidth').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeWidth(this.value) }, false)
-                    document.getElementById('objectHeight').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeHeight(this.value) }, false)
-                    document.getElementById('objectColor').addEventListener("blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeColor(this.value); document.getElementById('picker1').color.fromString(this.value) }, false)
-                    document.getElementById('objectColor').addEventListener("change", function() { changeColor(this.value); updateBorder(this) }, false)
-                    document.getElementById('borderColor').addEventListener("blur", function() { document.getElementById('picker2').color.fromString(this.value) }, false)
-                    document.getElementById('borderColor').addEventListener("change", function() { updateBorder(this) }, false)
-                    document.getElementById('connectionColor').addEventListener("blur", function() { document.getElementById('picker3').color.fromString(this.value) }, false)
-                    document.getElementById('connectionColor').addEventListener("change", function() { updateBorder(this) }, false)
-                 }
+                 
+                 addEventHandler(document.getElementById('canvas'), "mousemove", updateCursor)
+                 addEventHandler(document.getElementById('canvas'), "mousemove", resizeObject)
+                 addEventHandler(document.getElementById('canvas'), "mousedown", initResize)
+                 addEventHandler(document.getElementById('canvas'), "mousedown", updatePalettes)
+                 addEventHandler(document.getElementById('objectX'), "blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeX(this.value) })
+                 addEventHandler(document.getElementById('objectY'), "blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeY(this.value) })
+                 addEventHandler(document.getElementById('objectWidth'), "blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeWidth(this.value) })
+                 addEventHandler(document.getElementById('objectHeight'), "blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeHeight(this.value) })
+                 addEventHandler(document.getElementById('objectColor'), "blur", function() { if (selected_obj != document.getElementById('objectPalette').obj) return; changeColor(this.value); document.getElementById('picker1').color.fromString(this.value) })
+                 addEventHandler(document.getElementById('objectColor'), "change", function() { changeColor(this.value); updateBorder(this) })
+                 addEventHandler(document.getElementById('borderColor'), "blur", function() { document.getElementById('picker2').color.fromString(this.value) })
+                 addEventHandler(document.getElementById('borderColor'), "change", function() { updateBorder(this) })
+                 addEventHandler(document.getElementById('connectionColor'), "blur", function() { document.getElementById('picker3').color.fromString(this.value) })
+                 addEventHandler(document.getElementById('connectionColor'), "change", function() { updateBorder(this) })
+
                  document.getElementById('switchBold').onclick = function() {
                     p = document.getElementById('fontSample').style.fontWeight
                     if (p == 400 || p == 'normal' || p == '') {
@@ -880,7 +870,7 @@
                  addEventHandler(items[0], "mousedown", function() { if (!multiple) return; main_obj = getObjectByCoordsArray(coords); repaint(); document.getElementById('menu').style.display = 'none' })
                  addEventHandler(items[1], "mouseup", function() { openTextBox(); document.getElementById('menu').style.display = 'none' })
                  addEventHandler(items[2], "mouseup", function() { openFontDialog() })
-                 addEventHandler(items[3], "mousedown", function() { bringToFront(selected_obj); selected_obj.draw(); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[3], "mousedown", function() { bringToFront(selected_obj); document.getElementById('menu').style.display = 'none' })
                  addEventHandler(items[4], "mousedown", function() { sendToBack(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
                  addEventHandler(items[5], "mouseup", function() { copyObjects(coords[0], coords[1]); document.getElementById('menu').style.display = 'none' })
                  addEventHandler(items[6], "mouseup", function() { transform = true; equalize(selected_obj); calculatePoints(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
@@ -1094,7 +1084,7 @@
        </div>
        <div id="objectsDialog">
           <div class="header"><span style="position: absolute; left:0px; top: 0px; margin: 2px 3px 3px 6px;">Objects</span>
-             <div class="closeButton" onclick="closeConnectionDialog(false)">X</div>
+             <div class="closeButton" onclick="closeObjectsDialog(false)">X</div>
           </div>
           <div id="allObjects" class="list reorder"><div>Item 1</div><div>Item 2</div><div>Item 3</div><div>Item 4</div></div>
           <div class="okButton" onclick="closeObjectsDialog()">Close</div>

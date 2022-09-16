@@ -1,6 +1,6 @@
 function jsCanvas(id, wnd)
 {
-	this.setColor = new Function('arg', 'canvas', 'var ctx = canvas && canvas.getContext(\'2d\') || this.ctx; ctx.strokeStyle = arg.toLowerCase(); ctx.fillStyle = arg.toLowerCase();');
+	this.setColor = new Function('arg', 'canvas', 'var ctx = canvas && canvas.getContext(\'2d\') || this.ctx; ctx.strokeStyle = arg.toLowerCase(); ctx.fillStyle = arg.toLowerCase(); this.color = arg.toLowerCase();');
    this.setFontSize = new Function('arg', 'this.fontSize = parseInt(arg) + \'px\'; this.setFont()');
    this.setFont = new Function('arg', 'this.fontFamily = arg; this.updateFont()');
    
@@ -19,6 +19,7 @@ function jsCanvas(id, wnd)
    this.canvas.style.width = '100%'
    this.canvas.style.height = '100%'
    this.canvas.style.margin = '0'
+   this.fontSize = '16px'
    this.canvas.width = this.canvas.clientWidth * dpi
    this.canvas.height = this.canvas.clientHeight * dpi
    
@@ -139,6 +140,7 @@ text both horizontally (e.g. right) and vertically within that rectangle */
          'height:' + height + 'px;'+
          'padding-top:'+ (padding > 0 ? (parseInt(padding) - 1) : 0) +'px;'+
          'padding-right:'+ (padding > 0 ? (parseInt(padding) + 2) : 0) +'px;'+
+         'color:' + this.color + ';'+
          'text-align:' + halign + ';'+
          'font-family:' +  this.fontFamily + ';'+
          'font-size:' + this.fontSize + ';'+

@@ -522,6 +522,22 @@ input {
     height: 30px;
     width: 130px;
 }
+#exportButton, #clearButton {
+    position: absolute;
+    top: 45px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    z-index: 10;
+}
+#exportButton {
+    background: url('img/exchange.png') center center no-repeat;
+    right: 75px;
+}
+#clearButton {
+    background: url('img/erase.png') center center no-repeat;
+    right: 50px;
+}
 @-moz-document url-prefix() {
     button { height: 30px; }
     #alignWrapper {
@@ -554,4 +570,8 @@ input {
         bottom: 0px;
         height: 20px;
     }
+}
+.textRect::selection {
+    background: rgba(255, 255, 255, 0);
+    user-select: none;
 }
