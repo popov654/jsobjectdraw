@@ -137,8 +137,8 @@ function jsCanvas(id, wnd)
          'left:' + x + 'px;'+
          'top:' + y + 'px;'+
          'width:' + (width - padding * 2) + 'px;'+
-         'height:' + height + 'px;'+
-         'padding-top:'+ (padding > 0 ? (parseInt(padding) - 1) : 0) +'px;'+
+         'height:' + (height - padding * 2 - 1) + 'px;'+
+         'padding-top:'+ (padding > 0 ? (parseInt(padding) + 1) : 0) +'px;'+
          'padding-right:'+ (padding > 0 ? (parseInt(padding) - 1) : 0) +'px;'+
          'color:' + color + ';'+
          'text-align:' + halign + ';'+

@@ -211,10 +211,11 @@
                                  selected_objects[i].y -= d
                                  selected_objects[i].width += 2 * d
                                  selected_objects[i].height += 2 * d
+                                 calculatePoints(selected_objects[i])
                                  updatePalettes()
                              }
                              if (selected_objects[i]) selected_objects[i].borderWidth = document.getElementById('borderWidth').value
-
+                             
                          }
                      }
                      for (var i = 0; i < selected_objects.length; i++) {
@@ -581,7 +582,7 @@
                  var items = document.getElementsByTagName('li')
                  canvas.onmousedown = function(event) { selectObject(event); document.getElementById('menu').style.display = 'none'; document.getElementById('menu2').style.display = 'none'}
                  canvas.onmousemove = function(event) { moveObject(event); moveDock(event); movePoint(event); moveVertex(event); }
-                 canvas.onmouseup = function(event) { if (temp) { selected_obj = temp; selected_objects.push(temp); } dropTempObject(event); setDock(); dropPoint(); dropVertex(); checkNumberOfSelectedObjects(); updatePalettes(); document.getElementById('objectPalette').obj = selected_obj }
+                 canvas.onmouseup = function(event) { if (temp) { selected_obj = temp } dropTempObject(event); setDock(); dropPoint(); dropVertex(); checkNumberOfSelectedObjects(); updatePalettes(); document.getElementById('objectPalette').obj = selected_obj }
                  canvas.onclick = function(event) { createDockPoint(event); resetTimers() }
                  canvas.oncontextmenu = function(event) {
                     //if (selected_obj == null) return false;

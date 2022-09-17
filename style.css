@@ -484,6 +484,9 @@ button {
 input {
     text-align: center;
 }
+#textBox {
+    display: none;
+}
 .palette {
     position: absolute;
     border: 1px solid black;
@@ -496,7 +499,7 @@ input {
     cursor: default;
 }
 .palette::selection {
-    background: #fff;
+    background: rgba(255, 255, 255, 0);
 }
 #rotationPalette {
     bottom: 50px;

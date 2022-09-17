@@ -1028,10 +1028,12 @@ or see http://www.gnu.org/copyleft/lesser.html
                      for (var j = 0; j < groups[i].length; j++) {
                         if (count < groups[i].length && selected_objects.indexOf(groups[i][j]) == -1) {
                            selected_objects.push(groups[i][j])
+                           console.log('Added 2')
                         } else if (count == groups[i].length && groups[i][j] != obj) {
                            for (var k = 0; k < selected_objects.length; k++) {
                               if (selected_objects[k] == groups[i][j]) {
                                  selected_objects.splice(k, 1)
+                                 console.log('Removed 2')
                                  break
                               }
                            }
@@ -1119,7 +1121,7 @@ or see http://www.gnu.org/copyleft/lesser.html
                     selected_objects.push(obj)
                  }
 
-                 selected_objects.sort(_sortFunc)
+                 selected_objects = selected_objects.sort(_sortFunc)
 
                  var new_array = []
                  var count = 0
@@ -1234,25 +1236,20 @@ or see http://www.gnu.org/copyleft/lesser.html
                  }
                  for (var i = 0; i < selected_objects.length; i++) {
                     if (selected_objects[i] == obj) {
-                       selected_objects[i] = null
+                       selected_objects.splice(i, 1)
                        selected_obj = null
+                       var is_main = selected_objects[i] == main_obj
                        for (var j = selected_objects.length - 1; j >= 0; j--) {
                           if (selected_objects[j]) {
                              selected_obj = selected_objects[j]
+                             if (is_main) main_obj = null
                              break;
                           }
                        }
                        //if (!selected_obj) main_obj = null
-                       var count = 0
-
-                       for (var i = 0; i < selected_objects.length; i++) {
-                          if (selected_objects[i]) count++
-                       }
-
                        repaint()
                        return;
                     }
-                    if (selected_objects[i] == main_obj) main_obj = null
                  }
                  selected_objects.push(obj)
                  selected_obj = obj
@@ -1595,43 +1592,8 @@ or see http://www.gnu.org/copyleft/lesser.html
                  obj.offsetsX[i] = obj.xPoints[i] - obj.x
                  obj.offsetsY[i] = obj.yPoints[i] - obj.y
              }
-
-             obj.docks = []
-             for (var i = 0; i < obj.vNum; i++) {
-                 if (i < obj.vNum - 1) {
-                    var x = Math.round((obj.xPoints[i] + obj.xPoints[i+1]) / 2 - obj.x)
-                    var y = Math.round((obj.yPoints[i] + obj.yPoints[i+1]) / 2 - obj.y)
-                 } else {
-                    var x = Math.round((obj.xPoints[i] + obj.xPoints[0]) / 2 - obj.x)
-                    var y = Math.round((obj.yPoints[i] + obj.yPoints[0]) / 2 - obj.y)
-                 }
-                 obj.docks.push(new Array(obj.offsetsX[i], obj.offsetsY[i]))
-                 obj.docks.push(new Array(x, y))
-             }
          }
-         if (obj.type == 'circle') {
-             obj.docks = []
-             obj.docks.push(new Array(obj.width / 2, obj.height / 2))
-             var l = Math.PI * (obj.width + obj.height)
-             var angle = 0
-             var d = 2 * Math.PI / (l / 15)
-             for (var i = 0; i < l / 15; i++) {
-                 obj.docks.push(new Array(obj.width / 2 * (1 + Math.cos(angle)), obj.height / 2 * (1 - Math.sin(angle))))
-                 angle += d
-             }
-         }
-         if (obj.type == 'text') {
-             obj.docks = []
-             obj.docks.push(new Array(0, 0))
-             obj.docks.push(new Array(obj.width / 2, -obj.padding))
-             obj.docks.push(new Array(obj.width, -obj.padding))
-             obj.docks.push(new Array(obj.width + obj.padding, obj.height / 2))
-             obj.docks.push(new Array(obj.width + obj.padding, obj.height + obj.padding))
-             obj.docks.push(new Array(obj.width / 2, obj.height + obj.padding))
-             obj.docks.push(new Array(-obj.padding, obj.height + obj.padding))
-             obj.docks.push(new Array(-obj.padding, obj.height / 2))
-         }
-         obj.docks.push(new Array(-1, -1))
+         calculateDockPoints(obj)
      }
 
      function calculatePoints2(obj) {
@@ -1650,22 +1612,46 @@ or see http://www.gnu.org/copyleft/lesser.html
                  if (obj.xPoints[i] > xC && obj.yPoints[i] > yC) obj.deltas[i] += 2 * Math.PI
                  obj.rs[i] = Math.sqrt((obj.xPoints[i] - xC) * (obj.xPoints[i] - xC) + (obj.yPoints[i] - yC) * (obj.yPoints[i] - yC)) / size
              }
-
-
-             obj.docks = []
-             for (var i = 0; i < obj.vNum; i++) {
-                 if (i < obj.vNum - 1) {
-                    var x = Math.round((obj.xPoints[i] + obj.xPoints[i+1]) / 2 - obj.x)
-                    var y = Math.round((obj.yPoints[i] + obj.yPoints[i+1]) / 2 - obj.y)
-                 } else {
-                    var x = Math.round((obj.xPoints[i] + obj.xPoints[0]) / 2 - obj.x)
-                    var y = Math.round((obj.yPoints[i] + obj.yPoints[0]) / 2 - obj.y)
-                 }
-                 obj.docks.push(new Array(obj.offsetsX[i], obj.offsetsY[i]))
-                 obj.docks.push(new Array(x,y))
-             }
-             obj.docks.push(new Array(-1, -1))
          }
+         calculateDockPoints(obj)
+     }
+     
+     function calculateDockPoints(obj) {
+        obj.docks = []
+        if (obj.type != 'text') {
+           for (var i = 0; i < obj.vNum; i++) {
+              if (i < obj.vNum - 1) {
+                 var x = Math.round((obj.xPoints[i] + obj.xPoints[i+1]) / 2 - obj.x)
+                 var y = Math.round((obj.yPoints[i] + obj.yPoints[i+1]) / 2 - obj.y)
+              } else {
+                 var x = Math.round((obj.xPoints[i] + obj.xPoints[0]) / 2 - obj.x)
+                 var y = Math.round((obj.yPoints[i] + obj.yPoints[0]) / 2 - obj.y)
+              }
+              obj.docks.push(new Array(obj.offsetsX[i], obj.offsetsY[i]))
+              obj.docks.push(new Array(x, y))
+           }
+        } else if (obj.type == 'circle') {
+           obj.docks = []
+           obj.docks.push(new Array(obj.width / 2, obj.height / 2))
+           var l = Math.PI * (obj.width + obj.height)
+           var angle = 0
+           var d = 2 * Math.PI / (l / 15)
+           for (var i = 0; i < l / 15; i++) {
+              obj.docks.push(new Array(obj.width / 2 * (1 + Math.cos(angle)), obj.height / 2 * (1 - Math.sin(angle))))
+              angle += d
+           }
+        } else if (obj.type == 'text') {
+           obj.docks = []
+           obj.docks.push(new Array(0, 0))
+           obj.docks.push(new Array(obj.width / 2, 0))
+           obj.docks.push(new Array(obj.width, 0))
+           obj.docks.push(new Array(obj.width, obj.height / 2))
+           obj.docks.push(new Array(obj.width, obj.height))
+           obj.docks.push(new Array(obj.width / 2, obj.height))
+           obj.docks.push(new Array(0, obj.height))
+           obj.docks.push(new Array(0, obj.height / 2))
+        }
+        obj.docks.push(new Array(-1, -1))
      }
 
      function removeObject(obj) {
@@ -1963,12 +1949,18 @@ or see http://www.gnu.org/copyleft/lesser.html
                  obj.el.style.left = obj.x - pad + 'px'
                  obj.el.style.top = obj.y - pad + 'px'
              } else {
-                 var left = obj.from.x + obj.from.docks[obj.dockFrom][0] - pad
-                 var top = obj.from.y + obj.from.docks[obj.dockFrom][1] - pad
+                 var dx = obj.to.x > obj.from.x
+                 var dy = obj.to.y > obj.from.y
+                 var x = dx ? obj.from.x : obj.to.x
+                 var y = dy ? obj.from.y : obj.to.y
+                 var left = x + (dx ? obj.from.docks[obj.dockFrom][0] : obj.to.docks[obj.dockTo][0]) - pad
+                 var top  = y + (dy ? obj.from.docks[obj.dockFrom][1] : obj.to.docks[obj.dockTo][1]) - pad
                  obj.el.style.left = left + 'px'
                  obj.el.style.top = top + 'px'
-                 var width = obj.to.x + obj.to.docks[obj.dockTo][0] + pad - left
-                 var height = obj.to.y + obj.to.docks[obj.dockTo][1] + pad - top
+                 x = dx ? obj.to.x : obj.from.x
+                 y = dy ? obj.to.y : obj.from.y
+                 var width = x + (dx ? obj.to.docks[obj.dockTo][0] : obj.from.docks[obj.dockFrom][0]) + pad - left
+                 var height = y + (dy ? obj.to.docks[obj.dockTo][1] : obj.from.docks[obj.dockFrom][1]) + pad - top
                  obj.el.style.width = width + 'px'
                  obj.el.style.height = height + 'px'
              }
@@ -2039,7 +2031,6 @@ or see http://www.gnu.org/copyleft/lesser.html
                 obj.draw = function() {
                    var textDecoration = this.underline ? 'underline' : 'none'
                    jg.drawStringRect(this.text, this.x, this.y, this.width, this.height, this.align, this.borderWidth, this.fontSize, this.fontWeight, this.fontStyle, this.font, textDecoration, this.angle, this.color, { borderWidth: this.borderWidth, borderColor: this.borderColor })
-                   console.log(this.color)
                    jg.paint()
                 }
                 break;
@@ -2058,10 +2049,12 @@ or see http://www.gnu.org/copyleft/lesser.html
                    var y0 = y
                    
                    if (backend == 'canvas') {
-                      xTo = xTo - x + pad
-                      yTo = yTo - y + pad
-                      x = pad
-                      y = pad
+                      var xmin = Math.min(x0, xTo)
+                      var ymin = Math.min(y0, yTo)
+                      xTo -= xmin - pad
+                      yTo -= ymin - pad
+                      x -= xmin - pad
+                      y -= ymin - pad
                    }
 
                    for (var i = 0; i < this.points.length; i++) {
@@ -2069,17 +2062,17 @@ or see http://www.gnu.org/copyleft/lesser.html
                          var c = correct(this.from.x + this.points[i].x, this.from.y + this.points[i].y, x, y, this.lineWidth, this.points.length)
                          if (backend == 'canvas') {
                             for (var j = 0; j < c.length; j++) {
-                               c[j] -= j % 2 == 0 ? x0 : y0
+                               c[j] -= j % 2 == 0 ? Math.min(x0, xTo) - pad : Math.min(y0, yTo) - pad
                             }
                          }
                          x2 = c[0]; y2 = c[1]; xTo2 = c[2]; yTo2 = c[3]
 
                          jg.drawLine(x2, y2, xTo2, yTo2, canvas)
-                         var xa = this.from.x + this.points[i].x
-                         var ya = this.from.y + this.points[i].y
+                         var xa = this.from.x - xmin + this.points[i].x
+                         var ya = this.from.y - ymin + this.points[i].y
                          if (backend == 'canvas') {
-                            x3 = xa - x0 + pad
-                            y3 = ya - y0 + pad
+                            x3 = xa - (x0 - xmin) + pad
+                            y3 = ya - (y0 - ymin) + pad
                          }
                          drawArrow(x, y, x3, y3, this.lineWidth, canvas)
                       } else {
@@ -2090,8 +2083,8 @@ or see http://www.gnu.org/copyleft/lesser.html
                       y = this.from.y + this.points[i].y
                       
                       if (backend == 'canvas') {
-                         x = x - x0 + pad
-                         y = y - y0 + pad
+                         x = x - (x0 - xmin) + pad
+                         y = y - (y0 - ymin) + pad
                       }
                    }
 
