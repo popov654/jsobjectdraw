@@ -1,6 +1,6 @@
 function jsCanvas(id, wnd)
 {
-	this.setColor = new Function('arg', 'canvas', 'var ctx = canvas && canvas.getContext(\'2d\') || this.ctx; ctx.strokeStyle = arg.toLowerCase(); ctx.fillStyle = arg.toLowerCase(); this.color = arg.toLowerCase();');
+   this.setColor = new Function('arg', 'canvas', 'var ctx = canvas && canvas.getContext(\'2d\') || this.ctx; ctx.strokeStyle = arg.toLowerCase(); ctx.fillStyle = arg.toLowerCase();');
    this.setFontSize = new Function('arg', 'this.fontSize = parseInt(arg) + \'px\'; this.setFont()');
    this.setFont = new Function('arg', 'this.fontFamily = arg; this.updateFont()');
    
@@ -128,25 +128,28 @@ function jsCanvas(id, wnd)
    this.paint = function() {}
 
 
-/* drawStringRect() added by Rick Blommers.
-Allows to specify the size of the text rectangle and to align the
-text both horizontally (e.g. right) and vertically within that rectangle */
-   this.drawStringRect = function(txt, x, y, width, height, halign, padding, fontWeight, fontStyle, textDecoration, angle)
+   /* drawStringRect() added by Rick Blommers.
+      Allows to specify the size of the text rectangle and to align the
+      text both horizontally (e.g. right) and vertically within that rectangle */
+   this.drawStringRect = function(txt, x, y, width, height, halign, padding, fontSize, fontWeight, fontStyle, fontFamily, textDecoration, angle, color, border)
    {
       var html = '<div class="textRect" style="position:absolute;overflow:hidden;word-wrap: break-word;'+
          'left:' + x + 'px;'+
          'top:' + y + 'px;'+
-         'width:' + width + 'px;'+
+         'width:' + (width - padding * 2) + 'px;'+
          'height:' + height + 'px;'+
          'padding-top:'+ (padding > 0 ? (parseInt(padding) - 1) : 0) +'px;'+
-         'padding-right:'+ (padding > 0 ? (parseInt(padding) + 2) : 0) +'px;'+
-         'color:' + this.color + ';'+
+         'padding-right:'+ (padding > 0 ? (parseInt(padding) - 1) : 0) +'px;'+
+         'color:' + color + ';'+
          'text-align:' + halign + ';'+
-         'font-family:' +  this.fontFamily + ';'+
-         'font-size:' + this.fontSize + ';'+
+         'font-family:' + fontFamily + ';'+
+         'font-size:' + fontSize + 'px;'+
          'font-weight:' + fontWeight + ';'+
          'font-style:' + fontStyle + ';'+
          'text-decoration:' + textDecoration + ';';
+      if (border.borderWidth) {
+         html += 'border:' + border.borderWidth + 'px solid ' + border.borderColor + ';';
+      }
       if (angle) {
          html += 'transform:rotate(-' + angle + 'deg);'+
                      '-ms-transform:rotate(-' + angle + 'deg);'+
@@ -155,9 +158,7 @@ text both horizontally (e.g. right) and vertically within that rectangle */
                      '-webkit-transform:rotate(-' + angle + 'deg);';
       }
       html +=
-         'color:' + this.color + ';">'+
-         txt +
-         '<\/div>';
+         '">'+ txt + '<\/div>';
       var el = document.createElement('div')
       document.getElementById('objects').appendChild(el)
       el.innerHTML = html

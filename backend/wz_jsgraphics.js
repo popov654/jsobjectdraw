@@ -873,21 +873,25 @@ interior_extrema. */
 /* drawStringRect() added by Rick Blommers.
 Allows to specify the size of the text rectangle and to align the
 text both horizontally (e.g. right) and vertically within that rectangle */
-	this.drawStringRect = function(txt, x, y, width, height, halign, padding, fontWeight, fontStyle, textDecoration, angle)
+	this.drawStringRect = function(txt, x, y, width, height, halign, padding, fontSize, fontWeight, fontStyle, fontFamily, textDecoration, angle, color, border)
 	{
 		this.htm += '<div class="textRect" style="position:absolute;overflow:hidden;word-wrap: break-word;'+
 			'left:' + x + 'px;'+
 			'top:' + y + 'px;'+
-			'width:' + width + 'px;'+
+			'width:' + (width - padding * 2) + 'px;'+
 			'height:' + height + 'px;'+
 			'padding-top:'+ (padding > 0 ? (parseInt(padding) - 1) : 0) +'px;'+
-			'padding-right:' + (padding > 0 ? (parseInt(padding) + 2) : 0) +'px;'+
-			'text-align:' + halign + ';'+
+			'padding-right:' + (padding > 0 ? (parseInt(padding) - 1) : 0) +'px;'+
+			'color:' + color + ';'+
+         'text-align:' + halign + ';'+
 			'font-family:' +  this.ftFam + ';'+
-			'font-size:' + this.ftSz + ';'+
+			'font-size:' + this.ftSz + 'px;'+
 			'font-weight:' + fontWeight + ';'+
 			'font-style:' + fontStyle + ';'+
 			'text-decoration:' + textDecoration + ';';
+      if (border.borderWidth) {
+         html += 'border:' + border.borderWidth + 'px solid ' + border.borderColor + ';';
+      }
       if (angle) {
          this.htm += 'transform:rotate(-' + angle + 'deg);'+
                      '-ms-transform:rotate(-' + angle + 'deg);'+
@@ -895,10 +899,7 @@ text both horizontally (e.g. right) and vertically within that rectangle */
                      '-o-transform:rotate(-' + angle + 'deg);'+
                      '-webkit-transform:rotate(-' + angle + 'deg);';
       }
-      this.htm +=
-			'color:' + this.color + ';">'+
-			txt +
-			'<\/div>';
+      this.htm += '">'+ txt + '<\/div>';
 	};
 
 

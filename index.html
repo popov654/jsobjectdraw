@@ -325,9 +325,25 @@
                  data += JSON.stringify(working_area)
                  data += "; connections = "
                  data += JSON.stringify(connections)
+                 data += "; groups = "
+                 data += JSON.stringify(arrayMap(groups, function(g) {
+                    var r = []
+                    for (var i = 0; i < g.length; i++) {
+                       r.push (g[i].id)
+                    }
+                    return r
+                 }))
                  document.getElementById('clipboard').value = data
                  document.getElementById('darkBackground').style.display = 'block'
                  document.getElementById('exportDialog').style.display = 'block'
+             }
+             
+             function arrayMap(arr, func) {
+                var b = []
+                for (var i = 0; i < arr.length; i++) {
+                   b.push(func(arr[i]))
+                }
+                return b
              }
 
              function closeExportDialog(doImport) {
@@ -529,26 +545,7 @@
                  current_connection = null
                  transform = false
                  cur_vertex = -1
-                 for (var i = 0; i < working_area.length; i++) {
-                    assignDrawingMethod(working_area[i])
-                 }
-                 fixPositions()
-                 for (var i = 0; i < connections.length; i++) {
-                    assignDrawingMethod(connections[i])
-                    for (var j = 0; j < working_area.length; j++) {
-                       if (equals(connections[i].from, working_area[j])) {
-                          connections[i].from = working_area[j]
-                          continue
-                       }
-                       if (equals(connections[i].to, working_area[j])) {
-                          connections[i].to = working_area[j]
-                          continue
-                       }
-                    }
-                    for (var j = 0; j < connections[i].points.length; j++) {
-                        connections[i].points[j].connection = connections[i]
-                    }
-                 }
+                 initData()
                  repaint()
                  updatePalettes()
                  hideConnectionPalette()
@@ -625,6 +622,11 @@
                         items[6].style.display = 'block'
                     } else {
                         items[6].style.display = 'none'
+                    }
+                    if (isGrouped()) {
+                        items[5].style.display = 'block'
+                    } else {
+                        items[5].style.display = 'none'
                     }
                     menu.style.left = parseInt(canvas.style.left) + x + 'px'
                     menu.style.top  = parseInt(canvas.style.top) + y + 'px'
@@ -872,11 +874,12 @@
                  addEventHandler(items[2], "mouseup", function() { openFontDialog() })
                  addEventHandler(items[3], "mousedown", function() { bringToFront(selected_obj); document.getElementById('menu').style.display = 'none' })
                  addEventHandler(items[4], "mousedown", function() { sendToBack(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
-                 addEventHandler(items[5], "mouseup", function() { copyObjects(coords[0], coords[1]); document.getElementById('menu').style.display = 'none' })
-                 addEventHandler(items[6], "mouseup", function() { transform = true; equalize(selected_obj); calculatePoints(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
-                 addEventHandler(items[7], "mouseup", function() { openBorderDialog() })
-                 addEventHandler(items[8], "mousedown", function() { for (var i = 0; i < selected_objects.length; i++) {removeObject(selected_objects[i])}; document.getElementById('menu').style.display = 'none'; updatePalettes() })
-                 addEventHandler(items[9], "mousedown", function() { pasteObjects(coords[0], coord[1]); document.getElementById('menu2').style.display = 'none' })
+                 addEventHandler(items[5], "mousedown", function() { removeFromGroup(); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[6], "mouseup", function() { copyObjects(coords[0], coords[1]); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[7], "mouseup", function() { transform = true; equalize(selected_obj); calculatePoints(selected_obj); repaint(); document.getElementById('menu').style.display = 'none' })
+                 addEventHandler(items[8], "mouseup", function() { openBorderDialog() })
+                 addEventHandler(items[9], "mousedown", function() { for (var i = 0; i < selected_objects.length; i++) {removeObject(selected_objects[i])}; document.getElementById('menu').style.display = 'none'; updatePalettes() })
+                 addEventHandler(items[10], "mousedown", function() { pasteObjects(coords[0], coord[1]); document.getElementById('menu2').style.display = 'none' })
                  
                  document.getElementById('textBox').style.display = 'none'
                  document.getElementById('objectX').disabled = true
@@ -975,8 +978,8 @@
          #menu, #menu2 {
              position: absolute;
              display: none;
-             padding: 2px;
-             background-color: #ссс;
+             border-radius: 3px;
+             background-color: #dadada;
              left: 45px;
              top: 42px;
              z-index: 2;
@@ -988,10 +991,21 @@
          .item {
              font-family: Arial, Helvetica, sans-serif;
              font-size: 15px;
-             padding: 2px;
+             line-height: 16px;
+             padding: 3px 4px 2px;
              list-style-type: none;
              cursor: default;
-             background-color: #ccc;
+             background-color: #cfcfcf;
+             width: 160px;
+         }
+         .item:first-child {
+            border-radius: 3px 3px 0px 0px;
+         }
+         .item:last-child {
+            border-radius: 0px 0px 3px 3px;
+         }
+         .item:first-child:last-child {
+            border-radius: 3px;
          }
     </style>
     <!--[if lte IE 7]><style type="text/css">/* <![CDATA[ */
@@ -1024,6 +1038,7 @@
           <li class="item">Font...</li>
           <li class="item">Bring to front</li>
           <li class="item">Send to back</li>
+          <li class="item">Remove from group</li>
           <li class="item">Copy</li>
           <li class="item">Transform</li>
           <li class="item">Border...</li>

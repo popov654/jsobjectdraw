@@ -233,51 +233,7 @@ or see http://www.gnu.org/copyleft/lesser.html
          this.lineColor = color || "#828282"
          this.points = points || []
          this.arrType = arrType || 0
-         this.draw = function() {
-            jg.setColor(this.lineColor)
-            jg.setStroke(this.lineWidth)
-
-            var x = this.from.x + this.from.docks[this.dockFrom][0]
-            var y = this.from.y + this.from.docks[this.dockFrom][1]
-            var xTo = this.to.x + this.to.docks[this.dockTo][0]
-            var yTo = this.to.y + this.to.docks[this.dockTo][1]
-
-            for (var i = 0; i < this.points.length; i++) {
-               if (i == 0 && this.arrType > 1) {
-                  var c = correct(this.from.x + this.points[i].x, this.from.y + this.points[i].y, x, y, this.lineWidth, this.points.length)
-                  x2 = c[0]; y2 = c[1]; xTo2 = c[2]; yTo2 = c[3]
-
-                  jg.drawLine(x2, y2, xTo2, yTo2)
-                  drawArrow(x, y, this.from.x + this.points[i].x, this.from.y + this.points[i].y, this.lineWidth)
-               } else {
-                  jg.drawLine(x, y, this.from.x + this.points[i].x, this.from.y + this.points[i].y)
-               }
-
-               x = this.from.x + this.points[i].x
-               y = this.from.y + this.points[i].y
-            }
-
-            var xTo2 = xTo
-            var yTo2 = yTo
-
-            var x2 = x
-            var y2 = y
-
-            if (this.arrType > 0) {
-               var c = correct(x, y, xTo, yTo, this.lineWidth, this.arrType, this.points.length)
-               x2 = c[0]; y2 = c[1]; xTo2 = c[2]; yTo2 = c[3]
-               jg.drawLine(x2, y2, xTo2, yTo2)
-               if (this.arrType != 2) {
-                  drawArrow(xTo, yTo, x, y, this.lineWidth)
-               }
-               if (this.points.length == 0 && this.arrType > 1) {
-                  drawArrow(x, y, xTo, yTo, this.lineWidth)
-               }
-            } else {
-               jg.drawLine(x, y, xTo, yTo)
-            }
-         }
-         this.draw()
+         assignDrawingMethod(this)
      }
 
 
@@ -752,8 +708,8 @@ or see http://www.gnu.org/copyleft/lesser.html
                 }
 
                 if (obj.type == 'text') {
-                    if (selected_objects.length == 1) obj.angle = angle
-                    else obj.angle += angle
+                    obj.angle = angle
+                    
                     var rad = (angle / 360) * 2 * Math.PI
                     /*
                     if (angle != 0) {
@@ -778,8 +734,7 @@ or see http://www.gnu.org/copyleft/lesser.html
                     */
                     obj.padding = 12 + (obj.width / 2 - 4) * Math.sin(rad)
                 } else {
-                    if (selected_objects.length == 1) obj.angle = degrees ? (angle / 360) * 2 * Math.PI : angle
-                    else obj.angle += degrees ? (angle / 360) * 2 * Math.PI : angle
+                    obj.angle = degrees ? (angle / 360) * 2 * Math.PI : angle
                     calculatePoints(obj)
                 }
 
@@ -1669,7 +1624,7 @@ or see http://www.gnu.org/copyleft/lesser.html
              obj.docks = []
              obj.docks.push(new Array(0, 0))
              obj.docks.push(new Array(obj.width / 2, -obj.padding))
-             obj.docks.push(new Array(obj.width, -obj.paddin))
+             obj.docks.push(new Array(obj.width, -obj.padding))
              obj.docks.push(new Array(obj.width + obj.padding, obj.height / 2))
              obj.docks.push(new Array(obj.width + obj.padding, obj.height + obj.padding))
              obj.docks.push(new Array(obj.width / 2, obj.height + obj.padding))
@@ -1685,7 +1640,7 @@ or see http://www.gnu.org/copyleft/lesser.html
              var xC = obj.x + obj.width / 2
              var yC = obj.y + obj.height / 2
 
-             obj.angle = 0
+             //obj.angle = 0
 
              for (var i = 0; i < obj.vNum; i++) {
                  var size = (obj.width > obj.height) ? obj.width : obj.height
@@ -1724,6 +1679,15 @@ or see http://www.gnu.org/copyleft/lesser.html
                selected_objects.splice(i, 1)
             }
          }
+         for (var i = 0; i < groups.length; i++) {
+            for (var j = 0; j < groups[i].length; j++) {
+               if (groups[i][j] == obj) {
+                  groups[i].splice(j, 1)
+                  break
+               }
+            }
+         }
+         removeEmptyGroups()
          selected_obj = null
          for (var i = selected_objects.length - 1; i >= 0; i--) {
             if (selected_objects[i]) {
@@ -1987,14 +1951,15 @@ or see http://www.gnu.org/copyleft/lesser.html
          var pad = 8
          if (backend == 'canvas' && (!obj.el || !obj.el.parentNode)) {
              obj.el = document.createElement('div')
+             obj.el.style.position = 'absolute'
             
              var width = obj.width + pad * 2
              var height = obj.height + pad * 2
-            
+             
+             
              if (obj.type != 'connection') {
                  obj.el.style.width = width + 'px'
                  obj.el.style.height = height + 'px'
-                 obj.el.style.position = 'absolute'
                  obj.el.style.left = obj.x - pad + 'px'
                  obj.el.style.top = obj.y - pad + 'px'
              } else {
@@ -2002,8 +1967,10 @@ or see http://www.gnu.org/copyleft/lesser.html
                  var top = obj.from.y + obj.from.docks[obj.dockFrom][1] - pad
                  obj.el.style.left = left + 'px'
                  obj.el.style.top = top + 'px'
-                 obj.el.style.width = obj.to.x + obj.to.docks[obj.dockTo][0] + pad - left + 'px'
-                 obj.el.style.height = obj.to.y + obj.to.docks[obj.dockTo][1] + pad - top + 'px'
+                 var width = obj.to.x + obj.to.docks[obj.dockTo][0] + pad - left
+                 var height = obj.to.y + obj.to.docks[obj.dockTo][1] + pad - top
+                 obj.el.style.width = width + 'px'
+                 obj.el.style.height = height + 'px'
              }
             
              var canvas = document.createElement('canvas')
@@ -2070,20 +2037,9 @@ or see http://www.gnu.org/copyleft/lesser.html
                 break;
              case "text":
                 obj.draw = function() {
-                   if (backend == 'canvas') canvas = prepareCanvas(obj)
-                   jg.setColor(this.color, canvas)
-                   jg.setFont(this.font, this.fontSize, Font.PLAIN)
                    var textDecoration = this.underline ? 'underline' : 'none'
-                   jg.drawStringRect(this.text, this.x, this.y, this.width, this.height, this.align, this.borderWidth, this.fontWeight, this.fontStyle, textDecoration, this.angle, this.color)
-                   if (this.borderWidth > 0) {
-                       jg.setColor(this.borderColor, canvas);
-                       jg.setStroke(this.borderWidth, canvas);
-                       var x = canvas ? 0 : this.x
-                       var y = canvas ? 0 : this.y
-                       this.xPoints = new Array(x - 2, x + this.width + 3 - this.borderWidth, x + this.width + 3 - this.borderWidth, x - 2);
-                       this.yPoints = new Array(y - 2, y - 2, y + this.height + 3 - this.borderWidth, y + this.height + 3 - this.borderWidth);
-                       jg.drawPolygon(this.xPoints, this.yPoints, canvas);
-                   }
+                   jg.drawStringRect(this.text, this.x, this.y, this.width, this.height, this.align, this.borderWidth, this.fontSize, this.fontWeight, this.fontStyle, this.font, textDecoration, this.angle, this.color, { borderWidth: this.borderWidth, borderColor: this.borderColor })
+                   console.log(this.color)
                    jg.paint()
                 }
                 break;
@@ -2388,13 +2344,15 @@ or see http://www.gnu.org/copyleft/lesser.html
      function getConnectionsSafeCopy() {
         var result = []
         for (var i = 0; i < connections.length; i++) {
-           if (connections[i]) result.push(connections[i])
+           if (connections[i]) {
+              result.push(connections[i])
+              result[i].from = result[i].from.id
+              result[i].to = result[i].to.id
+           }
         }
         for (var i = 0; i < result.length; i++) {
-           if (result[i].points.length > 0) {
-              for (var j = 0; j < result[i].points.length; j++) {
-                 result[i].points[j].connection = null
-              }
+           for (var j = 0; j < result[i].points.length; j++) {
+              delete result[i].points[j].connection
            }
         }
         return result
@@ -2476,23 +2434,25 @@ or see http://www.gnu.org/copyleft/lesser.html
         for (var i = 0; i < state_history[state_history.length - 1 - history_position].selected_objects.length; i++) {
            selected_objects.push(working_area[state_history[state_history.length - 1 - history_position].selected_objects[i]])
         }
-        aux_import()
+        initData()
         repaint()
      }
      
-     function aux_import() {
+     function initData() {
         for (var i = 0; i < working_area.length; i++) {
+           working_area[i].__proto__ = Shape.prototype
            assignDrawingMethod(working_area[i])
         }
         fixPositions()
         for (var i = 0; i < connections.length; i++) {
+           connections[i].__proto__ = Connection.prototype
            assignDrawingMethod(connections[i])
            for (var j = 0; j < working_area.length; j++) {
-              if (equals(connections[i].from, working_area[j])) {
+              if (connections[i].from == working_area[j].id) {
                  connections[i].from = working_area[j]
                  continue
               }
-              if (equals(connections[i].to, working_area[j])) {
+              if (connections[i].to == working_area[j].id) {
                  connections[i].to = working_area[j]
                  continue
               }
@@ -2501,9 +2461,195 @@ or see http://www.gnu.org/copyleft/lesser.html
                connections[i].points[j].connection = connections[i]
            }
         }
+        for (var i = 0; i < groups.length; i++) {
+           for (var j = 0; j < groups[i].length; j++) {
+              for (var k = 0; i < working_area.length; k++) {
+                 if (working_area[k].id == groups[i][j]) {
+                    groups[i][j] = working_area[k]
+                    break
+                 }
+              }
+           }
+        }
      }
      
      var state_history = []
+     
+     
+     function groupObjects() {
+        
+        var group_ids = []
+        var map = {}
+        
+        if (selected_objects.length <= 1) return
+        
+        for (var i = 0; i < selected_objects.length; i++) {
+           for (var j = 0; j < groups.length; j++) {
+              if (groups[j].indexOf(selected_objects[i]) != -1 &&
+                  group_ids.indexOf(j) == -1) {
+                 group_ids.push(j)
+              }
+              if (groups[j].indexOf(selected_objects[i]) != -1 &&
+                  map[selected_objects[i].id] === undefined) {
+                 map[selected_objects[i].id] = j
+              } else if (groups[j].indexOf(selected_objects[i]) != -1) {
+                 return
+              }
+           }
+        }
+        
+        for (var id in group_ids) {
+           for (var i = 0; i < groups[group_ids[id]].length; i++) {
+              // Abort if one of the groups is selected partially
+              if (selected_objects.indexOf(groups[group_ids[id]][i]) == -1) {
+                 return
+              }
+           }
+        }
+        
+        group_ids = group_ids.sort()
+        
+        var index = group_ids[0]
+        
+        if (index === undefined) {
+           groups.push([])
+           index = groups.length - 1
+        }
+        
+        for (var i = 0; i < selected_objects.length; i++) {
+           if (groups[index].indexOf(selected_objects[i]) == -1) {
+              groups[index].push(selected_objects[i])
+              // Remove object from previous group
+              if (map[selected_objects[i].id] !== undefined) {
+                 var group = groups[map[selected_objects[i].id]]
+                 for (var j = 0; j < group.length; j++) {
+                    if (group[j] == selected_objects[i]) {
+                       group.splice(j, 1)
+                       break
+                    }
+                 }
+                 
+              }
+              map[selected_objects[i].id] = index
+           }
+        }
+        groups[index] = groups[index].sort(sortByObjectId)
+        
+        removeEmptyGroups()
+     }
+     
+     function ungroupObjects() {
+        var group_ids = []
+        var map = {}
+        
+        if (selected_objects.length <= 1) return
+        
+        for (var i = 0; i < selected_objects.length; i++) {
+           for (var j = 0; j < groups.length; j++) {
+              if (groups[j].indexOf(selected_objects[i]) != -1 &&
+                  group_ids.indexOf(j) == -1) {
+                 group_ids.push(j)
+              }
+              if (groups[j].indexOf(selected_objects[i]) != -1 &&
+                  map[selected_objects[i].id] === undefined) {
+                 map[selected_objects[i].id] = j
+              } else if (groups[j].indexOf(selected_objects[i]) != -1) {
+                 return
+              }
+           }
+        }
+        
+        for (var i = 0; i < selected_objects.length; i++) {
+           // Remove object from previous group
+           if (map[selected_objects[i].id] !== undefined) {
+              var group = groups[map[selected_objects[i].id]]
+              for (var j = 0; j < group.length; j++) {
+                 if (group[j] == selected_objects[i]) {
+                    group.splice(j, 1)
+                    break
+                 }
+              }
+           }
+        }
+        
+        removeEmptyGroups()
+     }
+     
+     function removeFromGroup() {
+        var group_ids = []
+        var map = {}
+        
+        if (selected_objects.length <= 1) return
+        
+        for (var i = 0; i < selected_objects.length; i++) {
+           for (var j = 0; j < groups.length; j++) {
+              if (groups[j].indexOf(selected_objects[i]) != -1 &&
+                  group_ids.indexOf(j) == -1) {
+                 group_ids.push(j)
+              }
+              if (map[selected_objects[i].id] === undefined) {
+                 map[selected_objects[i].id] = j
+              } else {
+                 return
+              }
+           }
+        }
+        
+        var group = groups[map[selected_obj.id]]
+        
+        if (!group) return
+        
+        if (map[selected_obj.id] !== undefined) {
+           for (var i = 0; i < group.length; i++) {
+              for (var j = 0; j < selected_objects.length; j++) {
+                 // Abort if the group of the object is selected partially
+                 if (selected_objects.indexOf(group[i]) == -1) {
+                    return
+                 }
+              }
+           }
+        }
+
+        for (var i = 0; i < group.length; i++) {
+           if (group[i] == selected_obj) {
+              group.splice(i, 1)
+              break
+           }
+        }
+        // If the group is now confluent or empty, remove it
+        if (group.length <= 1) {
+           groups.splice(map[selected_obj], 1)
+        }
+     }
+     
+     function isGrouped() {
+        for (var i = 0; i < groups.length; i++) {
+           for (var j = 0; j < groups[i].length; j++) {
+              if (groups[i][j] == selected_obj) {
+                 return true
+              }
+           }
+        }
+        return false
+     }
+     
+     function sortByObjectId(a, b) {
+        if (!a.id || !b.id) return 0
+        return parseInt(a.id) - parseInt(b.id)
+     }
+     
+     function removeEmptyGroups() {
+        for (var i = 0; i < groups.length; i++) {
+           // If the group is now confluent or empty, remove it
+           if (groups[i].length <= 1) {
+              groups.splice(i, 1)
+              i--
+           }
+        }
+     }
+     
+     
+     var groups = []
      
 
      function hexToDec(n) {
