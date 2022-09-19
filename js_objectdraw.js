@@ -1058,19 +1058,6 @@ or see http://www.gnu.org/copyleft/lesser.html
                return
             }
          }
-         
-         if (!transform && selected_objects.length == 1 && !e.shiftKey && !e.ctrlKey && selected_obj && selected_obj.x <= x - 6 && x <= selected_obj.x + selected_obj.width + 7 &&
-             selected_obj.y <= y - 6 && y <= selected_obj.y + selected_obj.height + 7) {
-            dragging = true
-            existing = true
-            main_obj = null
-            temp = selected_obj
-            drag_offsetX = x - selected_obj.x
-            drag_offsetY = y - selected_obj.y
-            temp.x = obj.x
-            temp.y = obj.y
-            return;
-         }
 
          objectsToCopy = []
          xCopy = null
@@ -1265,11 +1252,7 @@ or see http://www.gnu.org/copyleft/lesser.html
                  return;
              } else {
 
-                 var contains = false
-
-                 for (var i = 0; i < selected_objects.length; i++) {
-                    if (selected_objects[i] == obj) contains = true
-                 }
+                 var contains = selected_objects.indexOf(obj) != -1
 
                  if (group_toggle < 1 && existing && !contains) {
                     selected_objects = []
@@ -1277,28 +1260,18 @@ or see http://www.gnu.org/copyleft/lesser.html
                     selected_objects.push(obj)
                  }
 
-                 var count = 0
-
-                 for (var i = 0; i < selected_objects.length; i++) {
-                    if (selected_objects[i]) count++
-                 }
-
-                 if (count == 2) {
+                 if (selected_objects.length == 2) {
                      findConnection()
                  }
+                 
+                 dragging = true
+                 lastX = x
+                 lastY = y
 
-                 if (count > 1) {
-                    lastX = x
-                    lastY = y
-                    selected_obj = obj
-                    temp = null
-                    repaint()
-                    return;
-                 }
-
+                 selected_obj = obj
+                 temp = null
                  main_obj = null
 
-                 temp = obj
              }
 
              drag_offsetX = x - obj.x
@@ -1309,15 +1282,13 @@ or see http://www.gnu.org/copyleft/lesser.html
                  temp.color = highlight(temp.color)
              }
 
-             if (!existing) {          //Calculate coordinates of the new object
+             if (!existing) {
+                
+                 //Calculate coordinates of the new object
                  temp.x = x - drag_offsetX
                  temp.y = y - drag_offsetY
-             } else if (temp) {
-                 temp.x = obj.x
-                 temp.y = obj.y
-             }
 
-             if (!existing) {     //Set properties and assign a drawing function
+                 //Set properties and assign a drawing function
                  copyProperties(obj, temp)
                  if (obj.type == 'text') {
                     temp.width = 84
@@ -1326,11 +1297,13 @@ or see http://www.gnu.org/copyleft/lesser.html
                     temp.width = 40
                     temp.height = 40
                  }
+                 
                  if (obj.type != 'circle') calculatePoints(temp)
                  temp.draw()
+              
+                 return
+                 
              }
-
-             repaint()
          } else if ((cur == 'default' || cur == '') && !(current_connection && e.ctrlKey)) {   //Click on free space
              selected_obj = null
              selected_objects = []
@@ -1338,8 +1311,8 @@ or see http://www.gnu.org/copyleft/lesser.html
              current_connection = null
              main_obj = null
              temp = null
-             repaint()
          }
+         repaint()
      }
 
      function moveObject(event) {
@@ -1354,15 +1327,9 @@ or see http://www.gnu.org/copyleft/lesser.html
          var y = coords[1]
 
          if (!dragging) return;
+         
 
-
-         var count = 0
-
-         for (var i = 0; i < selected_objects.length; i++) {
-            if (selected_objects[i]) count++
-         }
-
-         if (count > 1 && existing) {
+         if (existing) {
             for (var i = 0; i < selected_objects.length; i++) {
                if (!selected_objects[i]) continue;
                selected_objects[i].x = selected_objects[i].x + x - lastX
