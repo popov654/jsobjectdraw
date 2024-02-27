@@ -1,6 +1,6 @@
 /* This notice must be untouched at all times.
 
-js_objectdraw.js    v. 1.0b
+js_objectdraw.js    v. 1.0c
 Based on wz_jsgraphics.js (JavaScript VectorDraw Library by Walter Zorn, Copyright (c) 2002-2004)
 
 The latest version is available at
@@ -8,7 +8,7 @@ http://popov654.pp.ru/js/js_objectDraw.js
 
 Copyright (c) 2012 Alexandr Popov. All rights reserved.
 Created 07.12.2011 by Alexandr Popov (Web: http://popov654.pp.ru )
-Last modified: 27.08.2022
+Last modified: 27.02.2024
 
 
 High Performance JavaScript Modelling Library.
@@ -917,8 +917,8 @@ or see http://www.gnu.org/copyleft/lesser.html
               var obj = selected_objects[i]
               obj.el.style.left = obj.x - pad + 'px'
               obj.el.style.top =  obj.y - pad + 'px'
-              var old_width = parseInt(obj.el.style.width)
-              var old_height = parseInt(obj.el.style.height)
+              var old_width = parseInt(obj.el.style.width) - pad * 2
+              var old_height = parseInt(obj.el.style.height) - pad * 2
               if (obj.width != old_width || obj.height != old_height) {
                  obj.el.style.width = selected_objects[i].width + pad * 2 + 'px'
                  obj.el.style.height = selected_objects[i].height + pad * 2 + 'px'
@@ -1306,11 +1306,16 @@ or see http://www.gnu.org/copyleft/lesser.html
              }
          } else if ((cur == 'default' || cur == '') && !(current_connection && e.ctrlKey)) {   //Click on free space
              selected_obj = null
-             selected_objects = []
+             if (!e.ctrlKey) {
+                 selected_objects = []
+             }
              transform = false
              current_connection = null
              main_obj = null
              temp = null
+             coords = getCoords(e)
+             lastX = coords[0]
+             lastY = coords[1]
          }
          repaint()
      }
@@ -1359,6 +1364,41 @@ or see http://www.gnu.org/copyleft/lesser.html
             } catch (ex) {}
          }
 
+     }
+     
+     function hideSelectionRect() {
+         document.getElementById('selectionRect').style.display = 'none'
+         lastX = -1
+         lastY = -1
+     }
+     
+     function findObjectsInSelectionRect(event) {
+         var e = event || window.event
+         if (selected_obj || temp) return
+        
+         var rect = document.getElementById('selectionRect')
+         
+         var canvas = document.getElementById(div_id)
+         var parent_x = canvas.getBoundingClientRect().left + (window.pageOffsetX || document.body.scrollLeft)
+         var parent_y = canvas.getBoundingClientRect().top + (window.pageOffsetY || document.body.scrollTop)
+         
+         var x = parseFloat(rect.style.left) - parent_x
+         var y = parseFloat(rect.style.top) - parent_y
+         
+         var c = 0
+         
+         for (var i = 0; i < working_area.length; i++) {
+            var index = selected_objects.indexOf(working_area[i])
+            if (working_area[i].x >= x && working_area[i].x < x + rect.clientWidth &&
+                working_area[i].y >= y && working_area[i].y < y + rect.clientHeight) {
+               if (selected_objects.indexOf(working_area[i]) == -1) {
+                  selected_objects.push(working_area[i]); c++
+               }
+            } else if (index != -1 && !e.ctrlKey) {
+               selected_objects.splice(index, 1); c++
+            }
+         }
+         if (c > 0) repaintSelectedObjects()
      }
 
      function dropTempObject(event) {
@@ -1902,6 +1942,9 @@ or see http://www.gnu.org/copyleft/lesser.html
      
      function prepareCanvas(obj) {
          var pad = 8
+         if (backend == 'canvas' && obj.el && obj.el.parentNode) {
+             return obj.el.children[0]
+         }
          if (backend == 'canvas' && (!obj.el || !obj.el.parentNode)) {
              obj.el = document.createElement('div')
              obj.el.style.position = 'absolute'
